@@ -2,10 +2,10 @@
 
 Personal interview-prep tracker for **DSA**, **system design**, and **AI engineering**. Learning is production, not consumption: blurt first, apply the same day, write one sentence of what you learned.
 
-Live: [https://stride-ten-psi.vercel.app](https://stride-ten-psi.vercel.app)  
-Local: `http://localhost:5174`
+Local: `http://localhost:5174`  
+Production: whatever origin you add to the OAuth client (example: `https://your-app.vercel.app`).
 
-This is a personal app. Do **not** put it in Peakflo, work GCP, work Firestore, company Mongo, or a work Google login.
+This is a personal app. Do **not** put it in an employer cloud, work Firestore, company Mongo, or a work Google login.
 
 ## Run
 
@@ -44,7 +44,7 @@ Tickets do **not** live in a Vercel database. The Hobby deploy is a static front
 
 After you edit, Stride writes IndexedDB immediately, then pushes **that Google account’s** files ~4 seconds after you stop, and again when you hide the tab (switch app, lock phone). Do not rely on closing the tab alone. After a refresh, Google does not open by itself — click Continue.
 
-Drive scope is `drive.file` (only files Stride created) plus email. Work `@peakflo.co` logins are rejected.
+Drive scope is `drive.file` (only files Stride created) plus email. Work-domain Google logins are rejected.
 
 ## Google (free)
 
@@ -53,7 +53,7 @@ OAuth consent stays **External + Testing**. Do not publish the app (that starts 
 ### Local
 
 ```bash
-gcloud auth login   # personal Gmail only — abort if it is peakflo.co
+gcloud auth login   # personal Gmail only — abort if it is a work account
 ./scripts/setup-google-oauth.sh
 ```
 
@@ -61,10 +61,10 @@ Or by hand:
 
 1. Personal GCP project → enable **Google Drive API**.
 2. Credentials → **OAuth client ID → Web application**.
-3. Authorized JavaScript origins:
+3. Authorized JavaScript origins (examples — use your own):
    - `http://localhost:5174`
-   - `https://stride-ten-psi.vercel.app`
-4. Consent screen: **External**, **Testing**. **Test users** = every personal Gmail that should sign in (`atcsanchit@gmail.com`, `sanchitatc01@gmail.com`, …). Do not add `@peakflo.co`.
+   - `https://your-app.vercel.app`
+4. Consent screen: **External**, **Testing**. **Test users** = every personal Gmail that should sign in (examples: `rio@example.com`, `sam@example.net`). Do not add a work address.
 5. `stride/.env.local`:
 
 ```
