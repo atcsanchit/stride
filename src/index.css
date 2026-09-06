@@ -673,6 +673,12 @@ textarea {
 	border-bottom: 1px solid var(--line);
 	background: rgba(16, 20, 18, 0.92);
 	backdrop-filter: blur(10px);
+	flex-wrap: wrap;
+}
+
+.account-bar .drive-error {
+	flex-basis: 100%;
+	margin: 0;
 }
 
 .tag-row {
@@ -769,16 +775,228 @@ button.tag-chip {
 }
 
 .gate {
-	max-width: 560px;
-	padding-top: 4rem;
+	max-width: 440px;
+	padding-top: 3.2rem;
+	padding-bottom: 4rem;
+}
+
+.gate-head {
+	margin-bottom: 1.35rem;
+}
+
+.gate-head h1 {
+	font-size: 2.7rem;
+	line-height: 1.05;
+}
+
+.gate-head .lede {
+	margin: 0.55rem 0 0;
+	max-width: none;
 }
 
 .gate-card {
 	background: var(--bg-2);
 	border: 1px solid var(--line);
-	border-radius: 18px;
-	padding: 1.1rem 1.15rem 1.2rem;
-	margin-bottom: 1rem;
+	border-radius: 20px;
+	padding: 1.15rem 1.15rem 1.25rem;
+	margin-bottom: 0;
+}
+
+.gate-card.is-hero {
+	border-color: #31463b;
+	background: linear-gradient(180deg, #1a241e 0%, var(--bg-2) 70%);
+}
+
+.gate-card h2 {
+	margin-bottom: 0.7rem;
+}
+
+.gate-copy {
+	margin: 0 0 0.95rem;
+	line-height: 1.45;
+}
+
+.gate-identity {
+	display: flex;
+	gap: 0.75rem;
+	align-items: flex-start;
+	padding: 0.75rem 0.8rem;
+	margin: 0 0 1rem;
+	border-radius: 14px;
+	background: #121816;
+	border: 1px solid var(--line);
+}
+
+.gate-identity strong {
+	display: block;
+	font-size: 0.95rem;
+	word-break: break-all;
+}
+
+.gate-identity p {
+	margin: 0.2rem 0 0;
+	color: var(--muted);
+	font-size: 0.82rem;
+	line-height: 1.4;
+}
+
+.gate-avatar {
+	flex: 0 0 auto;
+	width: 2.2rem;
+	height: 2.2rem;
+	border-radius: 50%;
+	display: grid;
+	place-items: center;
+	background: #244233;
+	color: var(--ai);
+	font-family: var(--serif);
+	font-size: 1.05rem;
+}
+
+.gate-actions {
+	display: grid;
+	gap: 0.45rem;
+}
+
+.gate-actions button {
+	width: 100%;
+	justify-content: center;
+	padding: 0.62rem 0.9rem;
+}
+
+.gate-split {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	margin: 1.25rem 0 0.75rem;
+	color: var(--muted);
+	font-size: 0.72rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.gate-split::before,
+.gate-split::after {
+	content: '';
+	flex: 1;
+	height: 1px;
+	background: var(--line);
+}
+
+.gate-seg {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.25rem;
+	padding: 0.22rem;
+	margin: 0 0 1rem;
+	border-radius: 999px;
+	background: #121816;
+	border: 1px solid var(--line);
+}
+
+.gate-seg button {
+	border: 0;
+	padding: 0.5rem 0.7rem;
+	font-size: 0.92rem;
+	letter-spacing: 0;
+	text-transform: none;
+}
+
+.gate-seg button:hover {
+	border-color: transparent;
+	color: var(--ink);
+}
+
+.gate-seg button.is-on {
+	background: var(--bg-3);
+	color: var(--ai);
+	box-shadow: inset 0 0 0 1px #31463b;
+}
+
+.field-line {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 0.5rem;
+}
+
+.gate-optional {
+	font-size: 0.72rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--muted);
+}
+
+.course-grid {
+	display: grid;
+	gap: 0.65rem;
+	margin: 0;
+}
+
+.course-card {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+	text-align: left;
+	padding: 0.9rem 0.95rem 1rem;
+	border-radius: 16px;
+	border: 1px solid var(--line);
+	background: #121816;
+	cursor: pointer;
+	width: 100%;
+}
+
+.course-card:hover {
+	border-color: color-mix(in srgb, var(--accent, var(--ai)) 55%, var(--line));
+}
+
+.course-check {
+	flex: 0 0 auto;
+	width: 1.35rem;
+	height: 1.35rem;
+	margin-top: 0.15rem;
+	border-radius: 6px;
+	border: 1.5px solid var(--line);
+	display: grid;
+	place-items: center;
+	font-size: 0.78rem;
+	color: #102016;
+}
+
+.course-card.is-on .course-check {
+	background: var(--accent, var(--ai));
+	border-color: var(--accent, var(--ai));
+}
+
+.course-copy {
+	min-width: 0;
+}
+
+.course-card strong {
+	display: block;
+	margin: 0.12rem 0 0.35rem;
+	font-size: 1.12rem;
+	font-family: var(--serif);
+	font-weight: 500;
+}
+
+.course-card p {
+	margin: 0;
+	color: var(--muted);
+	font-size: 0.9rem;
+	line-height: 1.4;
+}
+
+.course-card.is-on {
+	border-color: var(--accent, var(--ai));
+	background: color-mix(in srgb, var(--accent, var(--ai)) 8%, #121816);
+}
+
+.course-card .kicker {
+	color: var(--accent, var(--muted));
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 }
 
 .profile-list {

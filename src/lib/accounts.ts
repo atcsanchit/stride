@@ -1,10 +1,12 @@
-import { ACCOUNTS_DB } from '../constants';
+import { ACCOUNTS_DB, emptySettings } from '../constants';
 import type { Profile, UserIdentity } from '../types';
 import { databaseExists, deleteDatabase, requestToPromise, transactionDone } from './idb';
 import { listProgressUserIds, nameKey, readUserIndex, writeUserIndex } from './identity';
 import { hashPin, randomSalt, verifyPin } from './pin';
-import { loadIdentity, loadAll, progressDbName } from './db';
+import { loadIdentity, loadAll, progressDbName, saveSettings } from './db';
 import { diskDeleteUser, diskLoadAccounts, diskSaveAccounts } from './disk';
+import { createId } from './id';
+import { notifyAccountsSaved } from './persist-hooks';
 
 const ACCOUNTS_VERSION = 2;
 
@@ -33,6 +35,7 @@ function normalizeProfile(row: Profile): Profile {
 	return {
 		...row,
 		nameKey: row.nameKey || nameKey(row.name),
+		googleEmail: row.googleEmail?.trim().toLowerCase() || undefined,
 	};
 }
 
@@ -61,6 +64,32 @@ async function mirrorAccounts(sessionUserId: string | null): Promise<void> {
 	const users = await loadProfilesFromIdb();
 	writeUserIndex(users);
 	await diskSaveAccounts(users, sessionUserId);
+	notifyAccountsSaved();
+}
+
+export function writeUserIndexFromList(users: Profile[]): void {
+	writeUserIndex(users);
+}
+
+export async function upsertProfileLocal(incoming: Profile): Promise<void> {
+	if (!incoming.id || !incoming.name) {
+		return;
+	}
+	const current = (await loadProfilesFromIdb()).find((entry) => entry.id === incoming.id);
+	const next = normalizeProfile({
+		...incoming,
+		...current,
+		id: incoming.id,
+		name: current?.name || incoming.name,
+		nameKey: current?.nameKey || incoming.nameKey || nameKey(incoming.name),
+		pinSalt: current?.pinSalt || incoming.pinSalt,
+		pinHash: current?.pinHash || incoming.pinHash,
+		lastSeenAt: Math.max(current?.lastSeenAt || 0, incoming.lastSeenAt || 0),
+		focusTrack: current?.focusTrack || incoming.focusTrack,
+		createdAt: current?.createdAt || incoming.createdAt,
+		googleEmail: incoming.googleEmail || current?.googleEmail,
+	});
+	await saveProfileIdb(next);
 }
 
 export async function loadProfiles(): Promise<Profile[]> {
@@ -89,6 +118,7 @@ export async function loadProfiles(): Promise<Profile[]> {
 			pinSalt: current.pinSalt || user.pinSalt,
 			pinHash: current.pinHash || user.pinHash,
 			lastSeenAt: Math.max(current.lastSeenAt || 0, user.lastSeenAt || 0),
+			googleEmail: current.googleEmail || user.googleEmail,
 		});
 		if (next.lastSeenAt !== current.lastSeenAt || next.pinHash !== current.pinHash) {
 			await saveProfileIdb(next);
@@ -126,6 +156,70 @@ export async function assertUniqueUsername(name: string, exceptId?: string): Pro
 			`“${taken[0].name}” is already taken. Usernames must be unique. Change the name, or switch to Log in.`,
 		);
 	}
+}
+
+async function uniqueNameFromEmail(email: string): Promise<string> {
+	const local = email.split('@')[0]?.replace(/[._]+/g, ' ').trim() || 'user';
+	const existing = new Set((await loadProfilesFromIdb()).map((row) => (row.nameKey || nameKey(row.name)).toLowerCase()));
+	let candidate = local;
+	let n = 2;
+	while (existing.has(nameKey(candidate))) {
+		candidate = `${local} ${n}`;
+		n += 1;
+	}
+	return candidate;
+}
+
+export async function ensureProfileForGoogleEmail(
+	email: string,
+	remoteUserIds: string[] = [],
+	options?: { claimUnlinkedLocal?: boolean },
+): Promise<Profile> {
+	const key = email.trim().toLowerCase();
+	if (!key) {
+		throw new Error('Google did not return an email.');
+	}
+	const now = Date.now();
+	const local = await loadProfilesFromIdb();
+	const tagged = local.find((row) => row.googleEmail === key);
+	if (tagged) {
+		const next = { ...tagged, lastSeenAt: now, googleEmail: key };
+		await saveProfile(next);
+		return next;
+	}
+
+	for (const id of remoteUserIds) {
+		const found = local.find((row) => row.id === id);
+		if (!found) {
+			continue;
+		}
+		const next = { ...found, googleEmail: key, lastSeenAt: now };
+		await saveProfile(next);
+		return next;
+	}
+
+	const unlinked = local.filter((row) => !row.googleEmail);
+	if (options?.claimUnlinkedLocal !== false && unlinked.length === 1 && remoteUserIds.length === 0) {
+		const next = { ...unlinked[0], googleEmail: key, lastSeenAt: now };
+		await saveProfile(next);
+		return next;
+	}
+
+	const name = await uniqueNameFromEmail(key);
+	const created: Profile = {
+		id: createId(),
+		name,
+		nameKey: nameKey(name),
+		focusTrack: 'ai-engineering',
+		pinSalt: '',
+		pinHash: '',
+		createdAt: now,
+		lastSeenAt: now,
+		googleEmail: key,
+	};
+	await saveProfile(created);
+	await saveSettings(created.id, emptySettings('ai-engineering'));
+	return created;
 }
 
 export async function pickProfileForName(name: string): Promise<Profile | undefined> {

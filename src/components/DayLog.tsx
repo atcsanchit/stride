@@ -1,13 +1,16 @@
-import { EFFORTS, REVIEWS, TRACKS } from '../constants';
+import { EFFORTS, REVIEWS, TRACKS, enabledTrackIds } from '../constants';
 import { dayBreakdown } from '../lib/day';
 import { formatElapsed, formatMinutes, prettyDateLong } from '../lib/time';
 import { AppNav } from './AppNav';
 import { useStride } from '../store/StrideState';
 
 export function DayLog({ date }: { date: string }) {
-	const { completions, openHome } = useStride();
+	const { completions, openHome, settings } = useStride();
 	const day = dayBreakdown(date, completions);
-	const maxMinutes = Math.max(1, ...day.byTrack.map((track) => track.minutes));
+	const tracks = day.byTrack.filter(
+		(track) => track.count > 0 || enabledTrackIds(settings).includes(track.trackId),
+	);
+	const maxMinutes = Math.max(1, ...tracks.map((track) => track.minutes));
 	const hasCourse = day.taskCount > 0;
 
 	return (
@@ -67,7 +70,7 @@ export function DayLog({ date }: { date: string }) {
 							<h2>Time by field</h2>
 						</div>
 						<ul className="track-bars">
-							{day.byTrack.map((track) => (
+							{tracks.map((track) => (
 								<li key={track.trackId}>
 									<div className="bar-label">
 										<span>{track.label}</span>

@@ -1,4 +1,4 @@
-import { TRACK_IDS, firstName, trackMeta } from '../constants';
+import { TRACK_IDS, enabledTrackIds, firstName, trackMeta } from '../constants';
 import { happeningForDate } from './happenings';
 import { completionCounts } from './day';
 import { lastNDates, todayKey } from './time';
@@ -185,15 +185,29 @@ export function coachNote(stats: TrackStats[], completions: Completion[], name =
 }
 
 export function todayPlan(stats: TrackStats[], settings: Settings): TodayPlan {
+	const empty: TodayPlan = {
+		trackId: settings.focusTrack,
+		reason: 'Pick a course to get a plan.',
+		target: 1,
+		items: [],
+		also: null,
+	};
+	if (stats.length === 0) {
+		return empty;
+	}
 	const today = todayKey();
 	const weekday = new Date().getDay();
 	const weekend = weekday === 0 || weekday === 6;
-	const focus = settings.focusTrack;
+	const enabled = enabledTrackIds(settings);
+	const ids = enabled.length > 0 ? enabled : TRACK_IDS;
+	const focus = ids.includes(settings.focusTrack) ? settings.focusTrack : ids[0];
 	const rotation: TrackId[] = weekend
-		? [focus, ...TRACK_IDS.filter((id) => id !== focus)]
+		? [focus, ...ids.filter((id) => id !== focus)]
 		: focus === 'dsa'
-			? ['dsa', ...TRACK_IDS.filter((id) => id !== 'dsa')]
-			: ['dsa', focus, ...TRACK_IDS.filter((id) => id !== 'dsa' && id !== focus)];
+			? ['dsa', ...ids.filter((id) => id !== 'dsa')]
+			: ids.includes('dsa')
+				? ['dsa', focus, ...ids.filter((id) => id !== 'dsa' && id !== focus)]
+				: [focus, ...ids.filter((id) => id !== focus)];
 
 	const quiet = stats
 		.filter((track) => track.total > 0 && track.percent < 100)
@@ -204,10 +218,11 @@ export function todayPlan(stats: TrackStats[], settings: Settings): TodayPlan {
 		});
 
 	const happeningTrack = happeningForDate(today).trackId;
+	const happeningOk = happeningTrack && ids.includes(happeningTrack) ? happeningTrack : undefined;
 
 	const preferred =
-		(happeningTrack
-			? quiet.find((track) => track.trackId === happeningTrack && track.todayCount < track.target)
+		(happeningOk
+			? quiet.find((track) => track.trackId === happeningOk && track.todayCount < track.target)
 			: undefined) ??
 		quiet.find((track) => track.trackId === settings.activeTrack && track.todayCount < track.target) ??
 		quiet.find((track) => track.todayCount < track.target) ??
@@ -227,7 +242,7 @@ export function todayPlan(stats: TrackStats[], settings: Settings): TodayPlan {
 	const reason =
 		preferred.todayCount >= preferred.target
 			? 'Floor is already hit. If you have leftover energy, take the next item and stop.'
-			: happeningTrack && preferred.trackId === happeningTrack
+			: happeningOk && preferred.trackId === happeningOk
 				? `Today’s happening is ${trackMeta(preferred.trackId).label}. Blurt, apply, then one sentence of what you learned.`
 				: preferred.last7.slice(0, 6).every((day) => day.count === 0)
 					? `${trackMeta(preferred.trackId).label} needs a day so it does not go cold.`

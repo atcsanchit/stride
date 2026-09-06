@@ -1,4 +1,4 @@
-import { emptySettings, LEGACY_PROGRESS_DB } from '../constants';
+import { emptySettings, LEGACY_PROGRESS_DB, sanitizeEnabledTracks } from '../constants';
 import type { Completion, Drop, ReviewCard, Roadmap, RoadmapItem, Settings, Sprint, Ticket, UserIdentity, WorkSession } from '../types';
 import { databaseExists, deleteDatabase, requestToPromise, transactionDone } from './idb';
 import {
@@ -9,6 +9,7 @@ import {
 	diskSaveSnapshot,
 	type DiskSnapshot,
 } from './disk';
+import { notifyProgressSaved } from './persist-hooks';
 import { normalizeSprint } from './sprint';
 import { normalizeTicket } from './ticket';
 
@@ -163,6 +164,7 @@ function normalizeSettings(value: Settings | undefined): Settings {
 		activeTrack: value?.activeTrack ?? fallback.activeTrack,
 		dailyTargets: { ...fallback.dailyTargets, ...value?.dailyTargets },
 		focusTrack: value?.focusTrack ?? fallback.focusTrack,
+		enabledTracks: sanitizeEnabledTracks(value?.enabledTracks),
 	};
 }
 
@@ -243,6 +245,10 @@ async function loadAllLocal(profileId: string) {
 
 export type ProgressSnapshot = Awaited<ReturnType<typeof loadAllLocal>>;
 
+export async function loadLocalSnapshot(profileId: string): Promise<ProgressSnapshot> {
+	return loadAllLocal(profileId);
+}
+
 function unionById<T extends { id: string }>(preferred: T[], extra: T[]): T[] {
 	const map = new Map<string, T>();
 	for (const row of extra) {
@@ -282,7 +288,7 @@ function snapshotHasProgress(snapshot: { tickets: Ticket[]; completions: Complet
 	return snapshot.tickets.length > 0 || snapshot.completions.length > 0 || snapshot.items.some((item) => item.done);
 }
 
-function mergeSnapshots(disk: DiskSnapshot, local: ProgressSnapshot): ProgressSnapshot {
+export function mergeSnapshots(disk: DiskSnapshot, local: ProgressSnapshot): ProgressSnapshot {
 	const preferDiskSettings = snapshotHasProgress(disk);
 	return {
 		roadmaps: unionById(disk.roadmaps, local.roadmaps),
@@ -335,16 +341,19 @@ async function mirrorFromIdb(profileId: string): Promise<void> {
 		const merged = await hydrateFromDisk(profileId);
 		if (merged) {
 			await mirrorSnapshot(profileId, merged);
+			notifyProgressSaved(profileId);
 			return;
 		}
 		const local = await loadAllLocal(profileId);
 		if (snapshotHasProgress(local)) {
 			markHydrated(profileId);
 			await mirrorSnapshot(profileId, local);
+			notifyProgressSaved(profileId);
 		}
 		return;
 	}
 	await mirrorSnapshot(profileId, await loadAllLocal(profileId));
+	notifyProgressSaved(profileId);
 }
 
 export async function loadAll(profileId: string): Promise<ProgressSnapshot> {
@@ -392,6 +401,7 @@ export async function replaceAll(profileId: string, snapshot: ProgressSnapshot):
 	await replaceAllLocal(profileId, snapshot);
 	markHydrated(profileId);
 	await mirrorSnapshot(profileId, snapshot);
+	notifyProgressSaved(profileId);
 }
 
 export async function migrateLegacyIfNeeded(profileId: string): Promise<boolean> {
@@ -552,6 +562,7 @@ export async function saveIdentity(profileId: string, identity: UserIdentity): P
 			console.error('Stride identity save failed', error);
 		}
 	}
+	notifyProgressSaved(profileId);
 }
 
 export async function saveSettings(profileId: string, settings: Settings): Promise<void> {

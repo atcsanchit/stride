@@ -25,18 +25,48 @@ Override the binary with `STRIDE_PYTHON=/path/to/python npm run dev` if you want
 
 ## Where data lives (personal, not work)
 
-Do **not** put this in Peakflo, work GCP, work Firestore, company Mongo, or a work Google login. This machine already has job accounts; mixing them is how personal interview prep leaks into employer systems.
+Do **not** put this in Peakflo, work GCP, work Firestore, company Mongo, or a work Google login.
 
 | Store | What | Use it? |
 | --- | --- | --- |
-| **Personal IndexedDB** (`stride-personal-accounts`, `stride-personal-<profileId>`) | Profiles, PIN hash, roadmaps, drops | **Yes — default.** Stays in this browser. Isolated per profile. |
-| **JSON export** (`name-date.stride.json`) | Full backup you download | **Yes — keep in a personal folder** (`~/Documents`, personal Drive, USB). Not company Drive. |
-| Work cloud (Peakflo / GCP / Firestore / Mongo) | Employer data | **Never.** |
-| Work Google / SSO | Job identity | **Never.** A Stride profile is a local name + optional PIN. |
+| **Personal IndexedDB** | Live tickets, courses, PINs. Fast cache. | **Yes.** Lost if you clear site data. |
+| **Personal Google Drive** (`Stride/accounts.json` + `Stride/<profileId>.json`) | Survives cache clear and new devices. | **Yes — personal Gmail only.** |
+| **JSON export** | Manual backup you download | **Yes.** |
+| Laptop `data/` JSON | Local Vite only (`localhost:5174`) | Laptop backup. Not on Vercel. |
+| Firestore / Gist | Not implemented | **Not until you explicitly ask.** |
+| Work cloud / work Google | Employer systems | **Never.** |
 
-Logout clears the session. Data stays on this device until you delete the profile or clear site data. Use a **personal Chrome profile** if this laptop also has a work Google profile, so browser sync and extensions stay separate.
+The live site writes IndexedDB first, then syncs **that Google account’s** Drive ~4 seconds after you stop editing, and again when you hide the tab (switch app, lock phone). Do not rely on closing the tab alone. Continue with Google **logs you into that Gmail’s Stride**. Picking a different Gmail opens that account — it does not load the previous person’s tickets onto the new Drive.
 
-If you already logged drops before login existed, the first profile you create will pick up that legacy `stride-tracker` database and then remove it.
+### Google Drive (free)
+
+From `stride/`:
+
+```bash
+gcloud auth login   # personal Gmail only — abort if it is peakflo.co
+./scripts/setup-google-oauth.sh
+```
+
+That creates a personal Cloud project and enables Drive. Google still requires one Console click for the Web client ID (there is no public API for that). The script opens the URL, then writes `.env.local`.
+
+Manual equivalent:
+
+1. Google Cloud Console → new project (or personal one) → enable **Google Drive API**.
+2. Credentials → **Create credentials → OAuth client ID → Web application**.
+3. Authorized JavaScript origins:
+   - `http://localhost:5174`
+   - `https://stride-ten-psi.vercel.app` (and any custom domain)
+4. OAuth consent screen: **External**, publishing status **Testing**, test user = your **personal** Gmail. Do not add a billing account.
+5. Copy the client ID into `stride/.env.local`:
+
+```
+VITE_GOOGLE_CLIENT_ID=xxxxx.apps.googleusercontent.com
+```
+
+6. Same variable in Vercel → Project → Settings → Environment Variables → Production (and Preview). Redeploy. Vite bakes this in at **build** time.
+7. In the app: **Continue with Google**. That signs you into the Stride account for that Gmail and creates a `Stride` folder on that personal Drive. A different Gmail is a different Stride.
+
+Python Lab still only runs on localhost.
 
 ## Roadmap format
 

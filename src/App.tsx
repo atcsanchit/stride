@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { AccountBar } from './components/AccountBar';
 import { CompleteModal } from './components/CompleteModal';
+import { CourseSetup } from './components/CourseSetup';
 import { Dashboard } from './components/Dashboard';
 import { DayLog } from './components/DayLog';
 import { Gate } from './components/Gate';
 import { Lab } from './components/Lab';
 import { ClassPage } from './components/ClassPage';
 import { LessonPage } from './components/LessonPage';
+import { ProfileSettings } from './components/ProfileSettings';
 import { RevisePage } from './components/RevisePage';
 import { ChoresPage } from './components/ChoresPage';
 import { SprintPage } from './components/SprintPage';
@@ -69,6 +71,15 @@ export default function App() {
 		);
 	}
 
+	if (phase === 'courses') {
+		return (
+			<>
+				<CourseSetup />
+				<Toasts />
+			</>
+		);
+	}
+
 	return (
 		<>
 			<AccountBar />
@@ -81,6 +92,7 @@ export default function App() {
 			{view.name === 'chores' ? <ChoresPage /> : null}
 			{view.name === 'revise' ? <RevisePage /> : null}
 			{view.name === 'day' ? <DayLog date={view.date} /> : null}
+			{view.name === 'settings' ? <ProfileSettings /> : null}
 			<TimerDock />
 			<CompleteModal />
 			{dragging ? (
