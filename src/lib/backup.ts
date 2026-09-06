@@ -69,6 +69,7 @@ export function parseBackup(text: string): BackupFile {
 			...emptySettings(parsed.profile.focusTrack),
 			...parsed.settings,
 			focusTrack: parsed.settings?.focusTrack ?? parsed.profile.focusTrack,
+			enabledTracks: parsed.settings?.enabledTracks ?? [],
 		},
 	};
 }

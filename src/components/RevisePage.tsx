@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { TRACKS, trackMeta } from '../constants';
+import { TRACKS, enabledTrackIds, trackMeta } from '../constants';
 import { lessonGuide } from '../lib/lessons';
 import {
 	DAILY_REVIEW_CAP,
@@ -18,7 +18,7 @@ import { AppNav } from './AppNav';
 import { TopicGuideCard } from './TopicGuideCard';
 
 export function RevisePage() {
-	const { view, items, reviews, completions, gradeReview, openLab, openRevise, openLesson } = useStride();
+	const { view, items, reviews, completions, gradeReview, openLab, openRevise, openLesson, settings } = useStride();
 	const today = todayKey();
 	const focusId = view.name === 'revise' ? view.itemId : undefined;
 	const [filter, setFilter] = useState<TrackId | 'all'>('all');
@@ -110,7 +110,7 @@ export function RevisePage() {
 				<button className={filter === 'all' ? 'pill is-on' : 'pill'} type="button" onClick={() => setFilter('all')}>
 					All tracks
 				</button>
-				{TRACKS.map((track) => (
+				{TRACKS.filter((track) => enabledTrackIds(settings).includes(track.id)).map((track) => (
 					<button
 						key={track.id}
 						className={filter === track.id ? 'pill is-on' : 'pill'}

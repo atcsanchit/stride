@@ -44,11 +44,34 @@ export const USERS_INDEX_KEY = 'stride-personal-users';
 export const ACCOUNTS_DB = 'stride-personal-accounts';
 export const LEGACY_PROGRESS_DB = 'stride-tracker';
 
+export function sanitizeEnabledTracks(ids: readonly string[] | undefined | null): TrackId[] {
+	const seen = new Set<TrackId>();
+	const next: TrackId[] = [];
+	for (const id of ids ?? []) {
+		if (!TRACK_IDS.includes(id as TrackId) || seen.has(id as TrackId)) {
+			continue;
+		}
+		seen.add(id as TrackId);
+		next.push(id as TrackId);
+	}
+	return next;
+}
+
+export function enabledTrackIds(settings: Pick<Settings, 'enabledTracks'>): TrackId[] {
+	return sanitizeEnabledTracks(settings.enabledTracks);
+}
+
+export function isTrackEnabled(settings: Pick<Settings, 'enabledTracks'>, trackId: TrackId): boolean {
+	const enabled = enabledTrackIds(settings);
+	return enabled.includes(trackId);
+}
+
 export function emptySettings(focusTrack: TrackId = 'ai-engineering'): Settings {
 	return {
 		activeTrack: 'dsa',
 		dailyTargets: { ...DEFAULT_TARGETS },
 		focusTrack,
+		enabledTracks: [],
 	};
 }
 

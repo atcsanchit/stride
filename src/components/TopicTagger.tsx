@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { TRACKS, trackMeta } from '../constants';
+import { TRACKS, enabledTrackIds, trackMeta } from '../constants';
 import type { RoadmapItem, TrackId } from '../types';
+import { useStride } from '../store/StrideState';
 
 export function TopicTagger({
 	selected,
@@ -11,8 +12,10 @@ export function TopicTagger({
 	onChange: (ids: string[]) => void;
 	items: RoadmapItem[];
 }) {
+	const { settings } = useStride();
 	const [query, setQuery] = useState('');
 	const [trackId, setTrackId] = useState<TrackId | 'all'>('all');
+	const courses = TRACKS.filter((track) => enabledTrackIds(settings).includes(track.id));
 	const chosen = useMemo(() => {
 		const byId = new Map(items.map((item) => [item.id, item]));
 		return selected.map((id) => byId.get(id)).filter((item): item is RoadmapItem => Boolean(item));
@@ -21,6 +24,7 @@ export function TopicTagger({
 		const needle = query.trim().toLowerCase();
 		return items
 			.filter((item) => !selected.includes(item.id))
+			.filter((item) => enabledTrackIds(settings).includes(item.trackId))
 			.filter((item) => trackId === 'all' || item.trackId === trackId)
 			.filter((item) => {
 				if (!needle) {
@@ -29,7 +33,7 @@ export function TopicTagger({
 				return `${item.section} ${item.subsection} ${item.title}`.toLowerCase().includes(needle);
 			})
 			.slice(0, 8);
-	}, [items, query, selected, trackId]);
+	}, [items, query, selected, settings, trackId]);
 
 	return (
 		<div className="topic-tagger">
@@ -58,7 +62,7 @@ export function TopicTagger({
 				<button className={trackId === 'all' ? 'pill is-on' : 'pill'} type="button" onClick={() => setTrackId('all')}>
 					All
 				</button>
-				{TRACKS.map((track) => (
+				{courses.map((track) => (
 					<button
 						key={track.id}
 						className={trackId === track.id ? 'pill is-on' : 'pill'}

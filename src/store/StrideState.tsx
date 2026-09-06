@@ -8,11 +8,12 @@ import {
 	useState,
 	type ReactNode,
 } from 'react';
-import { emptySettings, firstName, TRACKS } from '../constants';
+import { emptySettings, enabledTrackIds, firstName, isTrackEnabled, TRACKS } from '../constants';
 import { deleteProfile as deleteProfileRecord, assertUniqueUsername, hasPin, loadProfiles, pickProfileForName, readAccountSession, reconcileAccounts, saveProfile, setPin, unlockProfile } from '../lib/accounts';
 import { buildBackup, downloadBackup, parseBackup } from '../lib/backup';
 import { loadBundledRoadmaps } from '../lib/bundled';
 import { coachNote, todayPlan, trackStats } from '../lib/coach';
+import { grandfatherEnabledTracks, hasOwnProgress, withEnabledTracks } from '../lib/courses';
 import {
 	deleteRoadmap as deleteRoadmapRecord,
 	deleteReview,
@@ -36,6 +37,19 @@ import { mergeItems, reconcileItemsWithCompletions } from '../lib/merge';
 import { parseMarkdownRoadmap } from '../lib/parse-roadmap';
 import { applyGrade, prettyInterval, seedReviewCard, syncReviewCards } from '../lib/revise';
 import { clearSession, readSession, writeSession } from '../lib/session';
+import {
+	attachDriveLeaveSync,
+	disconnectGoogleDrive,
+	signInWithGoogle,
+	getDriveStatus,
+	installDrivePersistHooks,
+	pullProfileFromDrive,
+	restoreFromDrive,
+	subscribeDriveStatus,
+	syncDriveNow as pushDriveNow,
+	flushDriveSync,
+	type DriveStatus,
+} from '../lib/drive-sync';
 import { addDays, todayKey, weekEnd, weekStart } from '../lib/time';
 import { followingSprintRange, originalTicketTitle, previousSprintRange, sprintLabel, withSpiloverTitle } from '../lib/sprint';
 import { ticketNeedsPracticalEvidence } from '../lib/practical';
@@ -75,7 +89,7 @@ import type {
 	WorkSession,
 } from '../types';
 
-type Phase = 'boot' | 'gate' | 'app';
+type Phase = 'boot' | 'gate' | 'courses' | 'app';
 
 interface StrideContextValue {
 	ready: boolean;
@@ -111,8 +125,10 @@ interface StrideContextValue {
 	openClass: (trackId: TrackId, section: string) => void;
 	openLesson: (itemId: string) => void;
 	openDay: (date: string) => void;
+	openSettings: () => void;
 	setActiveTrack: (trackId: TrackId) => Promise<void>;
 	setTarget: (trackId: TrackId, target: number) => Promise<void>;
+	saveCourses: (tracks: TrackId[], focusTrack?: TrackId) => Promise<void>;
 	startTask: (itemId: string, ticketId?: string) => Promise<void>;
 	pauseTimer: (ticketId?: string) => Promise<void>;
 	resumeTimer: (ticketId?: string) => Promise<void>;
@@ -155,7 +171,7 @@ interface StrideContextValue {
 	importMarkdown: (filename: string, source: string, origin?: RoadmapOrigin) => Promise<void>;
 	importFiles: (files: FileList | File[]) => Promise<void>;
 	removeRoadmap: (id: string) => Promise<void>;
-	createProfile: (input: { name: string; focusTrack: TrackId; pin?: string }) => Promise<void>;
+	createProfile: (input: { name: string; pin?: string }) => Promise<void>;
 	signIn: (profileId: string, pin?: string) => Promise<void>;
 	signInByName: (name: string, pin?: string) => Promise<void>;
 	setAccountPin: (pin: string) => Promise<void>;
@@ -163,6 +179,10 @@ interface StrideContextValue {
 	removeAccount: (profileId: string) => Promise<void>;
 	exportBackup: () => void;
 	importBackupFile: (file: File) => Promise<void>;
+	drive: DriveStatus;
+	connectDrive: (options?: { pickAccount?: boolean }) => Promise<void>;
+	syncDriveNow: () => Promise<void>;
+	disconnectDrive: () => void;
 	dismissToast: (id: string) => void;
 	setDragging: (value: boolean) => void;
 }
@@ -207,6 +227,14 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const [settings, setSettings] = useState<Settings>(emptySettings());
 	const [toasts, setToasts] = useState<ToastMessage[]>([]);
 	const [dragging, setDragging] = useState(false);
+	const [drive, setDrive] = useState<DriveStatus>(getDriveStatus);
+
+	useEffect(() => {
+		installDrivePersistHooks();
+		return subscribeDriveStatus(setDrive);
+	}, []);
+
+	useEffect(() => attachDriveLeaveSync(), []);
 
 	const profileRef = useRef(profile);
 	profileRef.current = profile;
@@ -324,8 +352,22 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			} catch (error) {
 				console.error(error);
 			}
+			try {
+				await pullProfileFromDrive(seen.id);
+			} catch (error) {
+				console.error(error);
+			}
 			const loaded = await loadAll(seen.id);
 			loaded.settings = { ...loaded.settings, focusTrack: loaded.settings.focusTrack || seen.focusTrack };
+			if (enabledTrackIds(loaded.settings).length === 0 && hasOwnProgress(loaded)) {
+				loaded.settings = grandfatherEnabledTracks(loaded.settings);
+				try {
+					await saveSettings(seen.id, loaded.settings);
+				} catch (error) {
+					console.error(error);
+				}
+			}
+			const needsCourses = enabledTrackIds(loaded.settings).length === 0;
 			const seeded = await seedBundled(loaded, seen.id);
 			const reconciled = reconcileItemsWithCompletions(seeded.items, loaded.completions);
 			const previous = new Map(seeded.items.map((item) => [item.id, item]));
@@ -415,7 +457,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			setPendingTicketId('');
 			setSettings(seeded.settings);
 			setView({ name: 'home' });
-			setPhase('app');
+			setPhase(needsCourses ? 'courses' : 'app');
 		},
 		[seedBundled],
 	);
@@ -423,6 +465,14 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
+			try {
+				const restored = await restoreFromDrive(false);
+				if (!cancelled && restored.users.length > 0) {
+					setProfiles(restored.users);
+				}
+			} catch (error) {
+				console.error(error);
+			}
 			const list = await reconcileAccounts();
 			if (cancelled) {
 				return;
@@ -491,7 +541,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	);
 
 	const stats = useMemo(
-		() => TRACKS.map((track) => trackStats(track.id, items, completions, settings)),
+		() => enabledTrackIds(settings).map((trackId) => trackStats(trackId, items, completions, settings)),
 		[completions, items, settings],
 	);
 	const plan = useMemo(() => todayPlan(stats, settings), [settings, stats]);
@@ -1167,8 +1217,51 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		[requireProfile],
 	);
 
+	const saveCourses = useCallback(
+		async (tracks: TrackId[], focusTrack?: TrackId) => {
+			const current = focusTrack
+				? { ...settingsRef.current, focusTrack }
+				: settingsRef.current;
+			const next = withEnabledTracks(current, tracks);
+			const user = requireProfile();
+			setSettings(next);
+			await saveSettings(user.id, next);
+			if (user.focusTrack !== next.focusTrack) {
+				const seen = { ...user, focusTrack: next.focusTrack };
+				await saveProfile(seen);
+				setProfile(seen);
+				try {
+					await saveIdentity(seen.id, {
+						userId: seen.id,
+						name: seen.name,
+						nameKey: seen.nameKey || nameKey(seen.name),
+						focusTrack: seen.focusTrack,
+						createdAt: seen.createdAt,
+					});
+				} catch (error) {
+					console.error(error);
+				}
+			}
+			setView((currentView) => {
+				if (
+					(currentView.name === 'track' || currentView.name === 'class') &&
+					!next.enabledTracks.includes(currentView.trackId)
+				) {
+					return { name: 'home' };
+				}
+				return currentView;
+			});
+			setPhase((currentPhase) => (currentPhase === 'courses' ? 'app' : currentPhase));
+			pushToast(
+				'Courses saved',
+				next.enabledTracks.map((id) => TRACKS.find((track) => track.id === id)?.short ?? id).join(' · '),
+			);
+		},
+		[pushToast, requireProfile],
+	);
+
 	const createProfile = useCallback(
-		async (input: { name: string; focusTrack: TrackId; pin?: string }) => {
+		async (input: { name: string; pin?: string }) => {
 			const name = input.name.trim();
 			if (!name) {
 				throw new Error('Name is required');
@@ -1178,7 +1271,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				id: createId(),
 				name,
 				nameKey: nameKey(name),
-				focusTrack: input.focusTrack,
+				focusTrack: 'ai-engineering',
 				pinSalt: '',
 				pinHash: '',
 				createdAt: Date.now(),
@@ -1189,9 +1282,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			} else {
 				await saveProfile(next);
 			}
-			await saveSettings(next.id, emptySettings(input.focusTrack));
+			await saveSettings(next.id, emptySettings());
 			await enterWorkspace(next);
-			pushToast('Welcome', `${firstName(name)}, this browser keeps your record under one permanent user id.`);
+			pushToast('Welcome', `${firstName(name)}, pick the courses this account should show.`);
 		},
 		[enterWorkspace, pushToast],
 	);
@@ -1244,6 +1337,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	);
 
 	const signOut = useCallback(() => {
+		void flushDriveSync(false);
 		clearSession();
 		setProfile(null);
 		const blank = blankWorkspace();
@@ -1347,6 +1441,29 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		[applyBackup, phase],
 	);
 
+	const connectDrive = useCallback(async (options?: { pickAccount?: boolean }) => {
+		const { status, profile: googleProfile } = await signInWithGoogle(options);
+		const list = await loadProfiles();
+		setProfiles(list);
+		pushToast(
+			'Logged in',
+			status.email
+				? `${status.email}. This Google account’s Stride. Pick a different Gmail and you open that person’s tickets, not this one.`
+				: 'Signed in with Google.',
+		);
+		await enterWorkspace(googleProfile);
+	}, [enterWorkspace, pushToast]);
+
+	const runDriveSync = useCallback(async () => {
+		await pushDriveNow();
+		pushToast('Drive synced', 'accounts.json and profile JSON are in the Stride folder.');
+	}, [pushToast]);
+
+	const disconnectDrive = useCallback(() => {
+		disconnectGoogleDrive();
+		pushToast('Drive disconnected', 'This browser is local-only again. Files on Drive were not deleted.');
+	}, [pushToast]);
+
 	const value: StrideContextValue = {
 		ready: phase !== 'boot',
 		phase,
@@ -1373,12 +1490,20 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		dragging,
 		openHome: () => setView({ name: 'home' }),
 		goTo: (next) => {
+			if ((next.name === 'track' || next.name === 'class') && !isTrackEnabled(settingsRef.current, next.trackId)) {
+				setView({ name: 'settings' });
+				return;
+			}
 			setView(next);
 			if (next.name === 'track' || next.name === 'class') {
 				void setActiveTrack(next.trackId);
 			}
 		},
 		openTrack: (trackId) => {
+			if (!isTrackEnabled(settingsRef.current, trackId)) {
+				setView({ name: 'settings' });
+				return;
+			}
 			setView({ name: 'track', trackId });
 			void setActiveTrack(trackId);
 		},
@@ -1389,8 +1514,10 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		openClass: (trackId, section) => setView({ name: 'class', trackId, section }),
 		openLesson: (itemId) => setView({ name: 'lesson', itemId }),
 		openDay: (date) => setView({ name: 'day', date }),
+		openSettings: () => setView({ name: 'settings' }),
 		setActiveTrack,
 		setTarget,
+		saveCourses,
 		startTask,
 		pauseTimer,
 		resumeTimer,
@@ -1419,6 +1546,10 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		removeAccount,
 		exportBackup,
 		importBackupFile,
+		drive,
+		connectDrive,
+		syncDriveNow: runDriveSync,
+		disconnectDrive,
 		dismissToast: (id) => setToasts((current) => current.filter((toast) => toast.id !== id)),
 		setDragging,
 	};

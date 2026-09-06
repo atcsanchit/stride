@@ -9,7 +9,8 @@ export type View =
 	| { name: 'revise'; itemId?: string }
 	| { name: 'class'; trackId: TrackId; section: string }
 	| { name: 'lesson'; itemId: string }
-	| { name: 'day'; date: string };
+	| { name: 'day'; date: string }
+	| { name: 'settings' };
 
 export type RecallGrade = 'again' | 'hard' | 'good' | 'easy';
 
@@ -154,6 +155,7 @@ export type Settings = {
 	activeTrack: TrackId;
 	dailyTargets: Record<TrackId, number>;
 	focusTrack: TrackId;
+	enabledTracks: TrackId[];
 };
 
 export type Profile = {
@@ -165,6 +167,7 @@ export type Profile = {
 	pinHash: string;
 	createdAt: number;
 	lastSeenAt: number;
+	googleEmail?: string;
 };
 
 export type UserIdentity = {

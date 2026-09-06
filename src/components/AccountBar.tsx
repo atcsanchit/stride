@@ -4,7 +4,18 @@ import { hasPin } from '../lib/accounts';
 import { useStride } from '../store/StrideState';
 
 export function AccountBar() {
-	const { profile, signOut, exportBackup, importBackupFile, setAccountPin } = useStride();
+	const {
+		profile,
+		signOut,
+		exportBackup,
+		importBackupFile,
+		setAccountPin,
+		drive,
+		connectDrive,
+		syncDriveNow,
+		disconnectDrive,
+		openSettings,
+	} = useStride();
 	const fileRef = useRef<HTMLInputElement>(null);
 	const [pinDraft, setPinDraft] = useState('');
 	const [pinOpen, setPinOpen] = useState(false);
@@ -18,8 +29,9 @@ export function AccountBar() {
 				{firstName(profile.name)}
 				<small className="muted">
 					{' '}
-					· this device
+					· {drive.connected ? drive.email ?? 'Google on' : 'this device'}
 					{hasPin(profile) ? ' · PIN on' : ''}
+					{drive.syncing ? ' · syncing' : ''}
 				</small>
 			</span>
 			<div className="nav">
@@ -55,9 +67,31 @@ export function AccountBar() {
 						Set PIN
 					</button>
 				)}
+				<button type="button" onClick={openSettings}>
+					Profile
+				</button>
 				<button type="button" onClick={exportBackup}>
 					Export
 				</button>
+				{drive.configured ? (
+					drive.connected ? (
+						<>
+							<button type="button" disabled={drive.syncing} onClick={() => void syncDriveNow()}>
+								Sync Drive
+							</button>
+							<button type="button" disabled={drive.syncing} onClick={() => void connectDrive({ pickAccount: true })}>
+								Switch Google
+							</button>
+							<button type="button" onClick={disconnectDrive}>
+								Disconnect Google
+							</button>
+						</>
+					) : (
+						<button type="button" disabled={drive.syncing} onClick={() => void connectDrive({ pickAccount: true })}>
+							Log in with Google
+						</button>
+					)
+				) : null}
 				<button type="button" onClick={() => fileRef.current?.click()}>
 					Import
 				</button>
@@ -65,6 +99,7 @@ export function AccountBar() {
 					Log out
 				</button>
 			</div>
+			{drive.lastError ? <p className="muted drive-error">{drive.lastError}</p> : null}
 			<input
 				ref={fileRef}
 				className="sr-only"
