@@ -11,6 +11,7 @@ import {
 } from './disk';
 import { notifyProgressSaved } from './persist-hooks';
 import { normalizeSprint } from './sprint';
+import { pickSession } from './work-session';
 import { normalizeTicket } from './ticket';
 
 export function progressDbName(profileId: string): string {
@@ -249,6 +250,23 @@ export async function loadLocalSnapshot(profileId: string): Promise<ProgressSnap
 	return loadAllLocal(profileId);
 }
 
+function mergeSessions(preferred: WorkSession[], extra: WorkSession[]): WorkSession[] {
+	const map = new Map<string, WorkSession>();
+	for (const row of extra) {
+		if (row?.id) {
+			map.set(row.id, row);
+		}
+	}
+	for (const row of preferred) {
+		if (!row?.id) {
+			continue;
+		}
+		const previous = map.get(row.id);
+		map.set(row.id, previous ? pickSession(row, previous) : row);
+	}
+	return [...map.values()];
+}
+
 function unionById<T extends { id: string }>(preferred: T[], extra: T[]): T[] {
 	const map = new Map<string, T>();
 	for (const row of extra) {
@@ -295,7 +313,7 @@ export function mergeSnapshots(disk: DiskSnapshot, local: ProgressSnapshot): Pro
 		items: mergeCourseItems(disk.items, local.items),
 		drops: unionById(disk.drops, local.drops),
 		completions: unionById(disk.completions, local.completions),
-		sessions: unionById(disk.sessions, local.sessions),
+		sessions: mergeSessions(disk.sessions, local.sessions),
 		sprints: unionById(disk.sprints.map((row) => normalizeSprint(row)), local.sprints),
 		tickets: unionById(
 			disk.tickets.map((row) => normalizeTicket(row)),
