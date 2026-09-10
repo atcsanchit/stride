@@ -59,6 +59,7 @@ import {
 	isSessionPaused,
 	isSessionRunning,
 	openSessionForTicket,
+	openSessionsForTicket,
 	pauseSession,
 	resumeSession,
 	sessionElapsed,
@@ -452,7 +453,25 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				}
 			}
 			setReviews(synced.cards);
-			setSessions(loaded.sessions);
+			const closedTicketIds = new Set(
+				loaded.tickets.filter((ticket) => ticketIsClosed(ticket.status)).map((ticket) => ticket.id),
+			);
+			const now = Date.now();
+			const nextSessions: WorkSession[] = [];
+			for (const session of loaded.sessions) {
+				if (!session.endedAt && session.ticketId && closedTicketIds.has(session.ticketId)) {
+					const ended = endSession(session, now);
+					try {
+						await putSession(seen.id, ended);
+					} catch (error) {
+						console.error(error);
+					}
+					nextSessions.push(ended);
+				} else {
+					nextSessions.push(session);
+				}
+			}
+			setSessions(nextSessions);
 			setPendingItemId(null);
 			setPendingTicketId('');
 			setSettings(seeded.settings);
@@ -546,12 +565,25 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	);
 	const plan = useMemo(() => todayPlan(stats, settings), [settings, stats]);
 	const coach = useMemo(() => coachNote(stats, completions, profile?.name ?? ''), [completions, profile?.name, stats]);
-	const persistSession = useCallback(async (profileId: string, session: WorkSession) => {
-		await putSession(profileId, session);
-		const next = [session, ...sessionsRef.current.filter((entry) => entry.id !== session.id)];
+	const persistSessions = useCallback(async (profileId: string, rows: WorkSession[]) => {
+		if (rows.length === 0) {
+			return;
+		}
+		const ids = new Set(rows.map((row) => row.id));
+		const next = [...rows, ...sessionsRef.current.filter((entry) => !ids.has(entry.id))];
 		sessionsRef.current = next;
 		setSessions(next);
+		for (const row of rows) {
+			await putSession(profileId, row);
+		}
 	}, []);
+
+	const persistSession = useCallback(
+		async (profileId: string, session: WorkSession) => {
+			await persistSessions(profileId, [session]);
+		},
+		[persistSessions],
+	);
 
 	const persistTicket = useCallback(async (profileId: string, ticket: Ticket) => {
 		await putTicket(profileId, ticket);
@@ -564,21 +596,33 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		async (profileId: string, exceptId?: string) => {
 			const now = Date.now();
 			const running = sessionsRef.current.filter((session) => isSessionRunning(session) && session.id !== exceptId);
-			for (const session of running) {
-				await persistSession(profileId, pauseSession(session, now));
-			}
+			await persistSessions(
+				profileId,
+				running.map((session) => pauseSession(session, now)),
+			);
 		},
-		[persistSession],
+		[persistSessions],
 	);
 
+	const sessionBelongsToOpenWork = useCallback((session: WorkSession) => {
+		if (!session.ticketId) {
+			return true;
+		}
+		const ticket = tickets.find((entry) => entry.id === session.ticketId) ?? ticketsRef.current.find((entry) => entry.id === session.ticketId);
+		if (!ticket) {
+			return true;
+		}
+		return !ticketIsClosed(ticket.status);
+	}, [tickets]);
+
 	const activeSession = useMemo(() => {
-		const running = sessions.find((session) => isSessionRunning(session));
+		const running = sessions.find((session) => isSessionRunning(session) && sessionBelongsToOpenWork(session));
 		if (running) {
 			return running;
 		}
 		return (
 			sessions.find((session) => {
-				if (!isSessionPaused(session)) {
+				if (!isSessionPaused(session) || !sessionBelongsToOpenWork(session)) {
 					return false;
 				}
 				if (!session.ticketId) {
@@ -587,7 +631,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				return tickets.find((ticket) => ticket.id === session.ticketId)?.status === 'progress';
 			}) ?? null
 		);
-	}, [sessions, tickets]);
+	}, [sessionBelongsToOpenWork, sessions, tickets]);
 	const currentSprint = useMemo(
 		() => sprints.find((sprint) => sprint.id === activeSprintId) ?? sprints[0] ?? null,
 		[activeSprintId, sprints],
@@ -657,16 +701,24 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const pauseTimer = useCallback(
 		async (ticketId = '') => {
 			const profileId = requireProfile().id;
-			const session = ticketId
-				? openSessionForTicket(sessionsRef.current, ticketId)
-				: sessionsRef.current.find((entry) => isSessionRunning(entry));
-			if (!session || !isSessionRunning(session)) {
+			const runningForTicket = ticketId
+				? sessionsRef.current.filter((session) => isSessionRunning(session) && session.ticketId === ticketId)
+				: [];
+			const targets =
+				runningForTicket.length > 0
+					? runningForTicket
+					: sessionsRef.current.filter((session) => isSessionRunning(session));
+			if (targets.length === 0) {
 				return;
 			}
-			await persistSession(profileId, pauseSession(session));
-			pushToast('Timer paused', session.title);
+			const now = Date.now();
+			await persistSessions(
+				profileId,
+				targets.map((session) => pauseSession(session, now)),
+			);
+			pushToast('Timer paused', targets[0].title);
 		},
-		[persistSession, pushToast, requireProfile],
+		[persistSessions, pushToast, requireProfile],
 	);
 
 	const resumeTimer = useCallback(
@@ -712,15 +764,19 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			if (!open) {
 				return;
 			}
-			if (status === 'cancelled') {
-				await persistSession(profileId, endSession(open));
+			if (status === 'cancelled' || ticketIsClosed(status)) {
+				const now = Date.now();
+				await persistSessions(
+					profileId,
+					openSessionsForTicket(sessionsRef.current, id).map((session) => endSession(session, now)),
+				);
 				return;
 			}
 			if (isSessionRunning(open)) {
 				await persistSession(profileId, pauseSession(open));
 			}
 		},
-		[persistSession, persistTicket, requestComplete, requireProfile, startTask],
+		[persistSession, persistSessions, persistTicket, requestComplete, requireProfile, startTask],
 	);
 
 	const cancelComplete = useCallback(() => {
@@ -759,14 +815,21 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}
 			try {
 				const now = Date.now();
-				const matching = sessionsRef.current.find(
-					(session) =>
-						!session.endedAt && (session.itemId === itemId || (ticketId && session.ticketId === ticketId)),
-				);
-				const elapsedMs = matching ? sessionElapsed(matching, now) : 0;
-				if (matching) {
-					await persistSession(profileId, endSession(matching, now));
-				}
+				const toEnd = sessionsRef.current.filter((session) => {
+					if (session.endedAt) {
+						return false;
+					}
+					if (ticketId && session.ticketId === ticketId) {
+						return true;
+					}
+					if (itemId && session.itemId === itemId) {
+						return true;
+					}
+					return false;
+				});
+				const ended = toEnd.map((session) => endSession(session, now));
+				await persistSessions(profileId, ended);
+				const elapsedMs = ended.reduce((max, session) => Math.max(max, sessionElapsed(session, now)), 0);
 
 				const tagged =
 					ticket && !isChoreTicket(ticket)
@@ -861,7 +924,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				pushToast('Could not save progress', 'IndexedDB rejected the write. Refresh and try Complete again.');
 			}
 		},
-		[pendingItemId, pendingTicketId, persistSession, persistTicket, pushToast, requireProfile],
+		[pendingItemId, pendingTicketId, persistSessions, persistTicket, pushToast, requireProfile],
 	);
 
 	const gradeReview = useCallback(

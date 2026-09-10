@@ -61,6 +61,35 @@ export function endSession(session: WorkSession, now = Date.now()): WorkSession 
 	};
 }
 
+export function openSessionsForTicket(sessions: WorkSession[], ticketId: string): WorkSession[] {
+	if (!ticketId) {
+		return [];
+	}
+	return sessions.filter((session) => isSessionOpen(session) && session.ticketId === ticketId);
+}
+
 export function openSessionForTicket(sessions: WorkSession[], ticketId: string): WorkSession | undefined {
-	return sessions.find((session) => isSessionOpen(session) && session.ticketId === ticketId);
+	const open = openSessionsForTicket(sessions, ticketId);
+	return open.find((session) => isSessionRunning(session)) ?? open[0];
+}
+
+export function pickSession(preferred: WorkSession, extra: WorkSession): WorkSession {
+	if (preferred.endedAt && extra.endedAt) {
+		return preferred.endedAt >= extra.endedAt ? preferred : extra;
+	}
+	if (extra.endedAt && !preferred.endedAt) {
+		return extra;
+	}
+	if (preferred.endedAt && !extra.endedAt) {
+		return preferred;
+	}
+	if (Boolean(extra.pausedAt) !== Boolean(preferred.pausedAt)) {
+		return extra.pausedAt ? extra : preferred;
+	}
+	const preferredElapsed = preferred.elapsedMs ?? 0;
+	const extraElapsed = extra.elapsedMs ?? 0;
+	if (extraElapsed > preferredElapsed) {
+		return extra;
+	}
+	return preferred;
 }
