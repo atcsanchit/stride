@@ -1,16 +1,22 @@
 :root {
-	--bg: #101412;
-	--bg-2: #171c19;
-	--bg-3: #1e2521;
-	--ink: #e8efe9;
-	--muted: #8b9a90;
-	--line: #2a332e;
+	--bg: #0e141c;
+	--bg-2: #141b26;
+	--bg-3: #1b2432;
+	--shade: #101722;
+	--ink: #e8edf3;
+	--muted: #8b97a8;
+	--line: #2c3848;
+	--manage: #6ea3d8;
+	--manage-deep: #3d6d9c;
+	--navy: #243044;
 	--ai: #6ecf9a;
 	--ai-deep: #3f9a6c;
+	--on-exec: #102016;
 	--dsa: #7aa7d9;
 	--design: #e2c16b;
+	--ground: #c49a78;
 	--rose: #d0897a;
-	--effort-light: #f4f7f4;
+	--effort-light: #f3f5f8;
 	--effort-easy: #e6d36a;
 	--effort-fair: #e59bb0;
 	--effort-hard: #f08a3a;
@@ -43,7 +49,7 @@ body,
 body {
 	font-family: var(--sans);
 	background:
-		radial-gradient(1000px 520px at 50% -12%, #1c2a22 0%, transparent 58%),
+		radial-gradient(1000px 520px at 50% -12%, #1a2840 0%, transparent 58%),
 		var(--bg);
 	color: var(--ink);
 }
@@ -65,7 +71,7 @@ button {
 }
 
 button:hover {
-	border-color: var(--ai);
+	border-color: var(--manage);
 }
 
 button:disabled {
@@ -76,7 +82,7 @@ button:disabled {
 .primary {
 	background: var(--ai);
 	border-color: var(--ai);
-	color: #102016;
+	color: var(--on-exec);
 	font-weight: 600;
 }
 
@@ -120,7 +126,7 @@ button:disabled {
 	letter-spacing: 0.16em;
 	text-transform: uppercase;
 	font-size: 0.72rem;
-	color: var(--ai);
+	color: var(--manage);
 }
 
 h1,
@@ -148,7 +154,7 @@ h2 {
 
 .nav-link.is-active {
 	background: var(--bg-3);
-	border-color: #3a463f;
+	border-color: color-mix(in srgb, var(--manage) 45%, var(--line));
 }
 
 .lede {
@@ -173,12 +179,12 @@ h2 {
 .coach {
 	padding: 1.15rem 1.25rem;
 	margin-bottom: 1.1rem;
-	border-color: #31463b;
+	border-color: color-mix(in srgb, var(--manage) 40%, var(--line));
 }
 
 .happening {
 	background: var(--bg-2);
-	border: 1px solid #3d5a48;
+	border: 1px solid color-mix(in srgb, var(--manage) 35%, var(--line));
 	border-radius: 18px;
 	padding: 1.15rem 1.25rem 1.2rem;
 	margin-bottom: 1.1rem;
@@ -222,8 +228,8 @@ h2 {
 }
 
 .week-event.is-today {
-	border-color: var(--ai);
-	background: #1a2820;
+	border-color: var(--manage);
+	background: color-mix(in srgb, var(--manage) 12%, var(--bg-2));
 }
 
 .interest-trail ul {
@@ -246,7 +252,7 @@ h2 {
 
 .blurt-pad {
 	background: var(--bg-2);
-	border: 1px dashed #3d5a48;
+	border: 1px dashed color-mix(in srgb, var(--manage) 40%, var(--line));
 	border-radius: 18px;
 	padding: 1.05rem 1.15rem 1.15rem;
 	margin-bottom: 1rem;
@@ -284,7 +290,7 @@ h2 {
 	text-transform: uppercase;
 	letter-spacing: 0.1em;
 	font-size: 0.68rem;
-	color: var(--ai);
+	color: var(--manage);
 }
 
 .tracks {
@@ -447,8 +453,8 @@ h2 {
 }
 
 .pill.is-on:not(.effort-pill):not(.status-pill):not(.prio-pill) {
-	border-color: var(--ai);
-	color: var(--ai);
+	border-color: var(--manage);
+	color: var(--manage);
 }
 
 .stepper {
@@ -476,7 +482,7 @@ textarea {
 	width: 100%;
 	border-radius: 12px;
 	border: 1px solid var(--line);
-	background: #121816;
+	background: var(--shade);
 	padding: 0.55rem 0.7rem;
 }
 
@@ -507,7 +513,7 @@ textarea {
 	width: 11px;
 	height: 11px;
 	border-radius: 3px;
-	background: #222a26;
+	background: var(--navy);
 }
 
 .drop-hint {
@@ -520,7 +526,7 @@ textarea {
 .drop-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(10, 16, 12, 0.78);
+	background: rgba(8, 12, 18, 0.78);
 	display: grid;
 	place-items: center;
 	z-index: 20;
@@ -576,7 +582,7 @@ textarea {
 	padding: 0.85rem 0.9rem 0.95rem;
 	border: 1px solid var(--line);
 	border-radius: 14px;
-	background: #121816;
+	background: var(--shade);
 }
 
 .topic-guide > summary {
@@ -612,7 +618,7 @@ textarea {
 	margin: 0 0 0.35rem;
 	padding: 0.65rem 0.75rem 0.15rem;
 	border-left: 2px solid var(--topic-accent);
-	background: #0e1411;
+	background: var(--bg);
 	border-radius: 0 10px 10px 0;
 }
 
@@ -655,7 +661,7 @@ textarea {
 	width: 280px;
 	text-align: left;
 	padding: 0.8rem 0.9rem;
-	background: #1c2620;
+	background: var(--bg-3);
 	border-radius: 14px;
 	display: grid;
 	gap: 0.2rem;
@@ -671,7 +677,7 @@ textarea {
 	gap: 1rem;
 	padding: 0.65rem 1.4rem;
 	border-bottom: 1px solid var(--line);
-	background: rgba(16, 20, 18, 0.92);
+	background: rgba(14, 20, 28, 0.92);
 	backdrop-filter: blur(10px);
 	flex-wrap: wrap;
 }
@@ -697,7 +703,7 @@ textarea {
 	padding: 0.12rem 0.5rem;
 	font-size: 0.72rem;
 	line-height: 1.25;
-	background: color-mix(in srgb, currentColor 14%, #121816);
+	background: color-mix(in srgb, currentColor 14%, var(--shade));
 	white-space: nowrap;
 }
 
@@ -713,7 +719,7 @@ button.tag-chip {
 }
 
 .tag-chip.is-on {
-	background: color-mix(in srgb, currentColor 26%, #121816);
+	background: color-mix(in srgb, currentColor 26%, var(--shade));
 }
 
 .tag-teal {
@@ -803,8 +809,8 @@ button.tag-chip {
 }
 
 .gate-card.is-hero {
-	border-color: #31463b;
-	background: linear-gradient(180deg, #1a241e 0%, var(--bg-2) 70%);
+	border-color: color-mix(in srgb, var(--manage) 40%, var(--line));
+	background: linear-gradient(180deg, #182233 0%, var(--bg-2) 70%);
 }
 
 .gate-card h2 {
@@ -823,7 +829,7 @@ button.tag-chip {
 	padding: 0.75rem 0.8rem;
 	margin: 0 0 1rem;
 	border-radius: 14px;
-	background: #121816;
+	background: var(--shade);
 	border: 1px solid var(--line);
 }
 
@@ -847,8 +853,8 @@ button.tag-chip {
 	border-radius: 50%;
 	display: grid;
 	place-items: center;
-	background: #244233;
-	color: var(--ai);
+	background: color-mix(in srgb, var(--manage) 22%, var(--bg-3));
+	color: var(--manage);
 	font-family: var(--serif);
 	font-size: 1.05rem;
 }
@@ -890,7 +896,7 @@ button.tag-chip {
 	padding: 0.22rem;
 	margin: 0 0 1rem;
 	border-radius: 999px;
-	background: #121816;
+	background: var(--shade);
 	border: 1px solid var(--line);
 }
 
@@ -909,8 +915,8 @@ button.tag-chip {
 
 .gate-seg button.is-on {
 	background: var(--bg-3);
-	color: var(--ai);
-	box-shadow: inset 0 0 0 1px #31463b;
+	color: var(--manage);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--manage) 40%, var(--line));
 }
 
 .field-line {
@@ -941,7 +947,7 @@ button.tag-chip {
 	padding: 0.9rem 0.95rem 1rem;
 	border-radius: 16px;
 	border: 1px solid var(--line);
-	background: #121816;
+	background: var(--shade);
 	cursor: pointer;
 	width: 100%;
 }
@@ -960,7 +966,7 @@ button.tag-chip {
 	display: grid;
 	place-items: center;
 	font-size: 0.78rem;
-	color: #102016;
+	color: var(--on-exec);
 }
 
 .course-card.is-on .course-check {
@@ -989,7 +995,7 @@ button.tag-chip {
 
 .course-card.is-on {
 	border-color: var(--accent, var(--ai));
-	background: color-mix(in srgb, var(--accent, var(--ai)) 8%, #121816);
+	background: color-mix(in srgb, var(--accent, var(--ai)) 8%, var(--shade));
 }
 
 .course-card .kicker {
@@ -1114,7 +1120,7 @@ button.cell {
 	border: 1px solid currentColor;
 	border-radius: 999px;
 	padding: 0.05rem 0.4rem;
-	background: color-mix(in srgb, currentColor 14%, #121816);
+	background: color-mix(in srgb, currentColor 14%, var(--shade));
 	line-height: 1.25;
 	white-space: nowrap;
 }
@@ -1126,7 +1132,7 @@ button.cell {
 
 .prio-1,
 .prio-pill.prio-1 {
-	color: var(--design);
+	color: var(--ground);
 }
 
 .prio-2,
@@ -1172,13 +1178,13 @@ button.cell {
 	flex-wrap: wrap;
 	gap: 0.8rem;
 	padding: 0.75rem 1rem;
-	background: #1c2620;
+	background: var(--bg-3);
 	border: 1px solid var(--ai);
 	border-radius: 18px;
 }
 
 .timer-dock.is-paused {
-	border-color: var(--design);
+	border-color: var(--ground);
 }
 
 .timer-dock-actions {
@@ -1208,7 +1214,7 @@ button.cell {
 
 .status-ready,
 .status-pill.status-ready {
-	color: var(--dsa);
+	color: var(--manage);
 }
 
 .status-progress,
@@ -1223,12 +1229,12 @@ button.cell {
 
 .status-done,
 .status-pill.status-done {
-	color: var(--design);
+	color: var(--ground);
 }
 
 .status-cancelled,
 .status-pill.status-cancelled {
-	color: #9aa39c;
+	color: var(--muted);
 	opacity: 0.9;
 }
 
@@ -1236,19 +1242,19 @@ button.cell {
 .effort-pill,
 .status-pill {
 	border-color: currentColor;
-	background: color-mix(in srgb, currentColor 10%, #121816);
+	background: color-mix(in srgb, currentColor 10%, var(--shade));
 }
 
 button.prio-pill.is-on,
 button.effort-pill.is-on,
 button.status-pill.is-on {
 	border-color: currentColor;
-	background: color-mix(in srgb, currentColor 24%, #121816);
+	background: color-mix(in srgb, currentColor 24%, var(--shade));
 }
 
 .ticket-note.is-paused,
 .ticket-row.is-paused {
-	border-color: var(--design);
+	border-color: var(--ground);
 }
 
 .ticket-note.is-cancelled,
@@ -1259,7 +1265,7 @@ button.status-pill.is-on {
 .modal-root {
 	position: fixed;
 	inset: 0;
-	background: rgba(8, 12, 10, 0.72);
+	background: rgba(8, 12, 18, 0.72);
 	display: grid;
 	place-items: center;
 	z-index: 30;
@@ -1268,7 +1274,7 @@ button.status-pill.is-on {
 
 .modal {
 	width: min(460px, 100%);
-	background: #1b221e;
+	background: var(--bg-3);
 	border: 1px solid var(--line);
 	border-radius: 22px;
 	padding: 1.4rem 1.3rem 1.2rem;
@@ -1285,7 +1291,7 @@ select {
 	width: 100%;
 	border-radius: 12px;
 	border: 1px solid var(--line);
-	background: #121816;
+	background: var(--shade);
 	padding: 0.55rem 0.7rem;
 }
 
@@ -1359,7 +1365,7 @@ select {
 }
 
 .ticket-group-ready {
-	border-left-color: color-mix(in srgb, var(--dsa) 75%, var(--line));
+	border-left-color: color-mix(in srgb, var(--manage) 75%, var(--line));
 }
 
 .ticket-group-requirements {
@@ -1367,11 +1373,11 @@ select {
 }
 
 .ticket-group-done {
-	border-left-color: color-mix(in srgb, var(--design) 70%, var(--line));
+	border-left-color: color-mix(in srgb, var(--ground) 70%, var(--line));
 }
 
 .ticket-group-cancelled {
-	border-left-color: color-mix(in srgb, #9aa39c 55%, var(--line));
+	border-left-color: color-mix(in srgb, var(--muted) 55%, var(--line));
 }
 
 .ticket-group-head {
@@ -1480,7 +1486,7 @@ select {
 	padding: 0.75rem 0.85rem;
 	border: 1px solid var(--line);
 	border-radius: 14px;
-	background: #121816;
+	background: var(--shade);
 }
 
 .ticket-closeout .eyebrow {
@@ -1508,7 +1514,7 @@ select {
 	padding: 0.75rem 0.85rem;
 	border: 1px solid var(--line);
 	border-radius: 14px;
-	background: #121816;
+	background: var(--shade);
 }
 
 .practical-card strong {
@@ -1546,17 +1552,17 @@ select {
 }
 
 .review-chip.review-3 {
-	background: #1a2420;
-	color: #c8ddd4;
+	background: color-mix(in srgb, var(--navy) 80%, var(--bg));
+	color: #c5d0dc;
 }
 
 .review-chip.review-4 {
-	background: #14241c;
+	background: color-mix(in srgb, var(--ai-deep) 28%, var(--shade));
 	color: #9ee0be;
 }
 
 .review-chip.review-5 {
-	background: #10261c;
+	background: color-mix(in srgb, var(--ai) 18%, var(--shade));
 	color: #7ee0b0;
 }
 
@@ -1578,7 +1584,7 @@ select {
 	align-items: center;
 	gap: 0.35rem;
 	border: 1px solid var(--line);
-	background: #121816;
+	background: var(--shade);
 	border-radius: 999px;
 	padding: 0.18rem 0.55rem;
 	font-size: 0.8rem;
@@ -1600,7 +1606,7 @@ select {
 
 .topic-chip.tag-chip {
 	border-color: currentColor;
-	background: color-mix(in srgb, currentColor 14%, #121816);
+	background: color-mix(in srgb, currentColor 14%, var(--shade));
 }
 
 .topic-chip.tag-chip span,
@@ -1623,7 +1629,7 @@ select {
 	text-align: left;
 	padding: 0.55rem 0.7rem;
 	border-radius: 12px;
-	background: #121816;
+	background: var(--shade);
 	border: 1px solid var(--line);
 	display: grid;
 	gap: 0.15rem;
@@ -1670,7 +1676,7 @@ select {
 	margin: 0 0 0.7rem;
 	padding: 0.7rem 0.8rem;
 	border-radius: 12px;
-	background: #121816;
+	background: var(--shade);
 	border: 1px solid var(--line);
 	white-space: pre-wrap;
 	overflow: auto;
@@ -1752,12 +1758,12 @@ select {
 }
 
 .sprint-day.is-on {
-	border-color: var(--ai);
-	background: #1a2620;
+	border-color: var(--manage);
+	background: color-mix(in srgb, var(--manage) 14%, var(--bg-2));
 }
 
 .sprint-day.is-today strong {
-	color: var(--ai);
+	color: var(--manage);
 }
 
 .sprint-actions {
@@ -1788,7 +1794,10 @@ select {
 	border: 1px solid transparent;
 }
 
-.ticket-row.is-open,
+.ticket-row.is-open {
+	border-color: var(--manage);
+}
+
 .ticket-row.is-running {
 	border-color: var(--ai);
 }
@@ -1863,7 +1872,7 @@ select {
 	padding: 0.75rem 0.9rem;
 	border: 1px solid var(--line);
 	border-radius: 14px;
-	background: #121816;
+	background: var(--shade);
 }
 
 .sprint-score p {
