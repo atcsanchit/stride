@@ -9,10 +9,12 @@ import { TagChip } from './TagChip';
 export function TicketRow({
 	ticket,
 	open = false,
+	hideStatus = false,
 	onOpen,
 }: {
 	ticket: Ticket;
 	open?: boolean;
+	hideStatus?: boolean;
 	onOpen: () => void;
 }) {
 	const { items, sessions, spillTicket, completions } = useStride();
@@ -20,7 +22,7 @@ export function TicketRow({
 	const tags = ticketTags(ticket);
 	const estimate = EFFORTS.find((entry) => entry.value === ticket.estimatedEffort);
 	const priority = PRIORITIES.find((entry) => entry.value === ticket.priority);
-	const status = STATUSES.find((entry) => entry.value === ticket.status);
+	const status = hideStatus ? undefined : STATUSES.find((entry) => entry.value === ticket.status);
 	const session = openSessionForTicket(sessions, ticket.id);
 	const running = Boolean(session && isSessionRunning(session));
 	const paused = Boolean(session && isSessionPaused(session));
@@ -38,7 +40,7 @@ export function TicketRow({
 			<div className="ticket-row-main">
 				<strong>{ticket.title}</strong>
 				<div className="ticket-row-meta">
-					{status ? <span className={`status-chip status-${status.value}`}>{status.label}</span> : null}
+					{hideStatus ? null : status ? <span className={`status-chip status-${status.value}`}>{status.label}</span> : null}
 					{estimate ? <span className={`effort effort-${estimate.value}`}>{estimate.label}</span> : null}
 					{review ? <span className={`review-chip review-${review.value}`}>{review.label}</span> : null}
 					<small className="muted">

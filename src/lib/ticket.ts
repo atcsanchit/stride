@@ -1,4 +1,4 @@
-import { CHORE_TAGS } from '../constants';
+import { BOARD_STATUS_ORDER, CHORE_TAGS, STATUSES } from '../constants';
 import type {
 	Completion,
 	Priority,
@@ -54,6 +54,36 @@ export function normalizeTicketStatus(value: string | undefined): TicketStatus {
 
 export function ticketIsClosed(status: TicketStatus): boolean {
 	return status === 'done' || status === 'cancelled';
+}
+
+export type TicketStatusGroup = {
+	status: TicketStatus;
+	label: string;
+	hint: string;
+	tickets: Ticket[];
+};
+
+export function groupTicketsByStatus(tickets: Ticket[]): TicketStatusGroup[] {
+	const buckets = new Map<TicketStatus, Ticket[]>(BOARD_STATUS_ORDER.map((status) => [status, []]));
+	for (const ticket of tickets) {
+		const list = buckets.get(ticket.status) ?? buckets.get('ready');
+		list?.push(ticket);
+	}
+	return BOARD_STATUS_ORDER.flatMap((status) => {
+		const grouped = buckets.get(status) ?? [];
+		if (grouped.length === 0) {
+			return [];
+		}
+		const meta = STATUSES.find((entry) => entry.value === status);
+		return [
+			{
+				status,
+				label: meta?.label ?? status,
+				hint: meta?.hint ?? '',
+				tickets: grouped,
+			},
+		];
+	});
 }
 
 export function ticketTimerPaused(ticket: Ticket, sessions: WorkSession[]): boolean {
