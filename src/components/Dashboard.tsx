@@ -10,6 +10,7 @@ import { HappeningCard } from './HappeningCard';
 import { Heatmap } from './Heatmap';
 import { TaskRow } from './TaskRow';
 import { TicketCard } from './TicketCard';
+import { TicketStatusGroups } from './TicketStatusGroups';
 
 export function Dashboard() {
 	const { stats, plan, coach, openTrack, openRevise, importFiles, settings, setTarget, profile, tickets, sprints, reviews, items } =
@@ -158,13 +159,13 @@ export function Dashboard() {
 						{todaySprint.length === 0 ? (
 							<p className="muted">Nothing assigned today. Add a High ticket on the Sprint board, or start a course item below.</p>
 						) : (
-							<ul className="plan-list">
-								{todaySprint.map((ticket) => (
-									<li key={ticket.id}>
-										<TicketCard ticket={ticket} compact />
-									</li>
-								))}
-							</ul>
+							<TicketStatusGroups
+								tickets={todaySprint}
+								idPrefix="today-sprint"
+								listClassName="plan-list"
+								empty={null}
+								renderTicket={(ticket) => <TicketCard ticket={ticket} compact />}
+							/>
 						)}
 					</section>
 					<section className="plan">
@@ -178,13 +179,13 @@ export function Dashboard() {
 						{todayChores.length === 0 ? (
 							<p className="muted">No Peakflo / assigned work for today. Capture it on Chores instead of a notepad.</p>
 						) : (
-							<ul className="plan-list">
-								{todayChores.map((ticket) => (
-									<li key={ticket.id}>
-										<TicketCard ticket={ticket} compact />
-									</li>
-								))}
-							</ul>
+							<TicketStatusGroups
+								tickets={todayChores}
+								idPrefix="today-chores"
+								listClassName="plan-list"
+								empty={null}
+								renderTicket={(ticket) => <TicketCard ticket={ticket} compact />}
+							/>
 						)}
 					</section>
 				</div>

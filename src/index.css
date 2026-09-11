@@ -1339,6 +1339,60 @@ select {
 	gap: 0.7rem;
 }
 
+.ticket-groups {
+	display: grid;
+	gap: 1.15rem;
+}
+
+.ticket-group {
+	min-width: 0;
+	padding-left: 0.75rem;
+	border-left: 2px solid var(--line);
+}
+
+.ticket-group-progress {
+	border-left-color: color-mix(in srgb, var(--ai) 75%, var(--line));
+}
+
+.ticket-group-blocked {
+	border-left-color: color-mix(in srgb, var(--rose) 75%, var(--line));
+}
+
+.ticket-group-ready {
+	border-left-color: color-mix(in srgb, var(--dsa) 75%, var(--line));
+}
+
+.ticket-group-requirements {
+	border-left-color: var(--line);
+}
+
+.ticket-group-done {
+	border-left-color: color-mix(in srgb, var(--design) 70%, var(--line));
+}
+
+.ticket-group-cancelled {
+	border-left-color: color-mix(in srgb, #9aa39c 55%, var(--line));
+}
+
+.ticket-group-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.55rem;
+	margin: 0 0 0.5rem;
+}
+
+.ticket-group-head h3 {
+	margin: 0;
+	font-size: 0.72rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	font-weight: 650;
+}
+
+.ticket-group-head .muted {
+	font-size: 0.78rem;
+}
+
 .bar-label {
 	display: flex;
 	justify-content: space-between;

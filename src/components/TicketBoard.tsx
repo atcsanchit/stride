@@ -12,6 +12,7 @@ import { ResumeTimerModal } from './ResumeTimerModal';
 import { StatusPills } from './StatusPills';
 import { TicketCard } from './TicketCard';
 import { TicketRow } from './TicketRow';
+import { TicketStatusGroups } from './TicketStatusGroups';
 import { TopicTagger } from './TopicTagger';
 import { TagChip } from './TagChip';
 
@@ -312,25 +313,25 @@ export function TicketBoard({ kind }: { kind: TicketKind }) {
 			<div className={`sprint-board${split ? ' is-split' : ''}${maxed ? ' is-max' : ''}`}>
 				{maxed ? null : (
 					<section className="sprint-list">
-						{visible.length === 0 ? (
-							<p className="muted">
-								{chore
-									? 'No chores in this view. Press New to capture assigned work.'
-									: 'No tickets in this view. Press New to write one.'}
-							</p>
-						) : (
-							<ul className="ticket-list">
-								{visible.map((ticket) => (
-									<li key={ticket.id}>
-										<TicketRow
-											ticket={ticket}
-											open={pane.mode === 'ticket' && pane.id === ticket.id}
-											onOpen={() => openTicketPane(ticket.id)}
-										/>
-									</li>
-								))}
-							</ul>
-						)}
+						<TicketStatusGroups
+							tickets={visible}
+							idPrefix={chore ? 'chore-board' : 'sprint-board'}
+							empty={
+								<p className="muted">
+									{chore
+										? 'No chores in this view. Press New to capture assigned work.'
+										: 'No tickets in this view. Press New to write one.'}
+								</p>
+							}
+							renderTicket={(ticket) => (
+								<TicketRow
+									ticket={ticket}
+									hideStatus
+									open={pane.mode === 'ticket' && pane.id === ticket.id}
+									onOpen={() => openTicketPane(ticket.id)}
+								/>
+							)}
+						/>
 					</section>
 				)}
 

@@ -108,6 +108,15 @@ export const STATUSES: Array<{ value: TicketStatus; label: string; hint: string 
 	{ value: 'cancelled', label: 'Triage / cancel', hint: 'Not doing this' },
 ];
 
+export const BOARD_STATUS_ORDER: TicketStatus[] = [
+	'progress',
+	'blocked',
+	'ready',
+	'requirements',
+	'done',
+	'cancelled',
+];
+
 export const PRIORITIES: Array<{ value: Priority; label: string; hint: string }> = [
 	{ value: 0, label: 'High', hint: 'Do first' },
 	{ value: 1, label: 'Medium', hint: 'This sprint' },
