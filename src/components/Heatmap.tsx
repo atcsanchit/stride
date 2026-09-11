@@ -4,11 +4,11 @@ import { useStride } from '../store/StrideState';
 
 function shade(count: number, max: number): string {
 	if (count <= 0 || max <= 0) {
-		return '#222a26';
+		return '#243044';
 	}
 	const t = Math.min(1, count / max);
 	if (t < 0.25) {
-		return '#2f5a42';
+		return '#2f5a6a';
 	}
 	if (t < 0.5) {
 		return '#3f8a60';
