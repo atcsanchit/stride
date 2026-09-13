@@ -6,6 +6,7 @@ import { todayKey, weekdayLabel } from '../lib/time';
 import { ticketOnSprintDay } from '../lib/sprint';
 import { useStride } from '../store/StrideState';
 import { AppNav } from './AppNav';
+import { ChairStrip } from './ChairStrip';
 import { CraftClock } from './CraftClock';
 import { HappeningCard } from './HappeningCard';
 import { Heatmap } from './Heatmap';
@@ -236,7 +237,10 @@ export function Dashboard() {
 				</section>
 			</div>
 
-			<Heatmap />
+			<div className="record-grid">
+				<Heatmap />
+				<ChairStrip />
+			</div>
 
 			<section className="drop-hint">
 				<strong>Drop a .md roadmap</strong>
