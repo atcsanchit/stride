@@ -379,6 +379,43 @@ h2 {
 	padding: 1.1rem 1.15rem 1.2rem;
 }
 
+.craft-clock {
+	margin-bottom: 1.1rem;
+}
+
+.craft-clock-stats {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 0.7rem;
+	margin-top: 0.85rem;
+}
+
+.craft-stat {
+	background: var(--shade);
+	border: 1px solid var(--line);
+	border-radius: 14px;
+	padding: 0.85rem 0.95rem;
+}
+
+.craft-stat .kicker {
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	font-size: 0.68rem;
+	color: var(--manage);
+}
+
+.craft-stat strong {
+	font-family: var(--serif);
+	font-size: 1.8rem;
+	display: block;
+	margin: 0.15rem 0 0;
+}
+
+.craft-stat small {
+	display: block;
+	margin-top: 0.2rem;
+}
+
 .plan-head,
 .shelf-head,
 .section-head {
@@ -2018,6 +2055,7 @@ select {
 
 @media (max-width: 860px) {
 	.tracks,
+	.craft-clock-stats,
 	.home-grid,
 	.lab-grid,
 	.day-stats,

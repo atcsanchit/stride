@@ -6,6 +6,7 @@ import { todayKey, weekdayLabel } from '../lib/time';
 import { ticketOnSprintDay } from '../lib/sprint';
 import { useStride } from '../store/StrideState';
 import { AppNav } from './AppNav';
+import { CraftClock } from './CraftClock';
 import { HappeningCard } from './HappeningCard';
 import { Heatmap } from './Heatmap';
 import { TaskRow } from './TaskRow';
@@ -70,6 +71,8 @@ export function Dashboard() {
 				same day, write one sentence of what you learned. Watching a video does not mark the heatmap. The week below is
 				the live plan.
 			</p>
+
+			<CraftClock />
 
 			<section className="coach">
 				<span className="tone">{coach.tone}</span>
