@@ -5,9 +5,7 @@ import { DAILY_REVIEW_CAP, dueQueue, reviewedOn } from '../lib/revise';
 import { todayKey, weekdayLabel } from '../lib/time';
 import { ticketOnSprintDay } from '../lib/sprint';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 import { ChairStrip } from './ChairStrip';
-import { CraftClock } from './CraftClock';
 import { HappeningCard } from './HappeningCard';
 import { Heatmap } from './Heatmap';
 import { TaskRow } from './TaskRow';
@@ -15,7 +13,7 @@ import { TicketCard } from './TicketCard';
 import { TicketStatusGroups } from './TicketStatusGroups';
 
 export function Dashboard() {
-	const { stats, plan, coach, openTrack, openRevise, importFiles, settings, setTarget, profile, tickets, sprints, reviews, items } =
+	const { stats, plan, openTrack, openRevise, importFiles, settings, setTarget, profile, tickets, sprints, reviews, items } =
 		useStride();
 	const fileRef = useRef<HTMLInputElement>(null);
 	const overall = consistencyScore(
@@ -58,68 +56,68 @@ export function Dashboard() {
 	const reviseToday = reviews.filter((card) => reviewedOn(card, todayKey())).length;
 
 	return (
-		<div className="page">
-			<header className="topbar">
+		<div className="page today-page">
+			<header className="page-head today-head">
 				<div>
-					<p className="eyebrow">Skill cadence</p>
-					<h1>Stride</h1>
+					<p className="eyebrow">Today</p>
+					<h1>{profile ? `${firstName(profile.name)}` : 'Plan'}</h1>
+					<p className="lede today-lede">
+						Blurt first, apply the same day, write one sentence. Watching a video does not mark the heatmap.
+					</p>
 				</div>
-				<AppNav active="home" />
+				<div className="today-head-meta">
+					<span className="today-score">
+						<small>Cadence</small>
+						<strong>{overall}</strong>
+					</span>
+				</div>
 			</header>
 
-			<p className="lede">
-				{profile ? `${firstName(profile.name)}, l` : 'L'}earning is production, not consumption. Blurt first, apply the
-				same day, write one sentence of what you learned. Watching a video does not mark the heatmap. The week below is
-				the live plan.
-			</p>
-
-			<CraftClock />
-
-			<section className="coach">
-				<span className="tone">{coach.tone}</span>
-				<h2>{coach.headline}</h2>
-				<p>{coach.body}</p>
+			<section className="today-focus">
+				<p className="section-label">Do this next</p>
+				<HappeningCard />
 			</section>
 
-			<HappeningCard />
-
-			<section className="tracks">
-				{stats.map((track) => {
-					const meta = trackMeta(track.trackId);
-					return (
-						<button
-							key={track.trackId}
-							className={`track-card${settings.activeTrack === track.trackId ? ' is-focus' : ''}`}
-							type="button"
-							style={{ '--accent': meta.accent } as CSSProperties}
-							onClick={() => openTrack(track.trackId)}
-						>
-							<span className="kicker">{meta.label}</span>
-							<strong className="pct">{track.percent}%</strong>
-							<p>
-								{track.done}/{track.total} · {track.currentSection}
-							</p>
-							<div className="bar">
-								<span style={{ width: `${track.percent}%` }} />
-							</div>
-							<p>
-								{track.todayCount}/{track.target} today · streak {track.streak}
-							</p>
-							<div className="week" aria-hidden="true">
-								{track.last7.map((day) => (
-									<i
-										key={day.date}
-										title={`${weekdayLabel(day.date)} ${day.count}`}
-										style={{
-											background: day.count > 0 ? meta.accent : undefined,
-											opacity: day.count > 0 ? Math.min(1, 0.35 + day.count / Math.max(track.target, 1)) : 1,
-										}}
-									/>
-								))}
-							</div>
-						</button>
-					);
-				})}
+			<section className="today-tracks">
+				<p className="section-label">Course progress</p>
+				<div className="tracks">
+					{stats.map((track) => {
+						const meta = trackMeta(track.trackId);
+						return (
+							<button
+								key={track.trackId}
+								className={`track-card${settings.activeTrack === track.trackId ? ' is-focus' : ''}`}
+								type="button"
+								style={{ '--accent': meta.accent } as CSSProperties}
+								onClick={() => openTrack(track.trackId)}
+							>
+								<span className="kicker">{meta.label}</span>
+								<strong className="pct">{track.percent}%</strong>
+								<p>
+									{track.done}/{track.total} · {track.currentSection}
+								</p>
+								<div className="bar">
+									<span style={{ width: `${track.percent}%` }} />
+								</div>
+								<p>
+									{track.todayCount}/{track.target} today · streak {track.streak}
+								</p>
+								<div className="week" aria-hidden="true">
+									{track.last7.map((day) => (
+										<i
+											key={day.date}
+											title={`${weekdayLabel(day.date)} ${day.count}`}
+											style={{
+												background: day.count > 0 ? meta.accent : undefined,
+												opacity: day.count > 0 ? Math.min(1, 0.35 + day.count / Math.max(track.target, 1)) : 1,
+											}}
+										/>
+									))}
+								</div>
+							</button>
+						);
+					})}
+				</div>
 			</section>
 
 			<section className="plan">

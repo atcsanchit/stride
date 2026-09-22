@@ -1,7 +1,6 @@
 import { TRACKS, enabledTrackIds, trackMeta } from '../constants';
 import type { TrackId } from '../types';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 import { CoursePicker } from './CoursePicker';
 
 export function ProfileSettings() {
@@ -25,12 +24,11 @@ export function ProfileSettings() {
 
 	return (
 		<div className="page">
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow">Account</p>
 					<h1>Profile</h1>
 				</div>
-				<AppNav active="settings" />
 			</header>
 			<p className="lede">
 				{profile ? `${profile.name} · ` : ''}Courses on this account. Turning one off hides it from the app; progress

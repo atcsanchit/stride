@@ -3,7 +3,6 @@ import { classGuide } from '../lib/lessons';
 import { challengesForItems } from '../lib/practical';
 import type { TrackId } from '../types';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 import { PracticalChallengeCard } from './PracticalChallengeCard';
 import { TaskRow } from './TaskRow';
 import { TopicGuideCard } from './TopicGuideCard';
@@ -29,14 +28,13 @@ export function ClassPage({ trackId, section }: { trackId: TrackId; section: str
 			<button className="ghost back" type="button" onClick={() => openTrack(trackId)}>
 				← {meta.short} classes
 			</button>
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow" style={{ color: meta.accent }}>
 						Class
 					</p>
 					<h1>{section}</h1>
 				</div>
-				<AppNav active={trackId} />
 			</header>
 			<p className="lede">
 				{done}/{lessons.length} lessons done. Open a lesson for the problem statement, the unblock article, and extra

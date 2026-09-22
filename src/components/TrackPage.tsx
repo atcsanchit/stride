@@ -3,7 +3,6 @@ import { trackMeta } from '../constants';
 import { topicGuide, trackSourceGuide } from '../lib/topic-guides';
 import type { TrackId } from '../types';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 import { TaskRow } from './TaskRow';
 import { TopicGuideCard } from './TopicGuideCard';
 
@@ -48,14 +47,13 @@ export function TrackPage({ trackId }: { trackId: TrackId }) {
 			<button className="ghost back" type="button" onClick={openHome}>
 				← Today
 			</button>
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow" style={{ color: meta.accent }}>
 						{meta.label}
 					</p>
 					<h1>{track.percent}%</h1>
 				</div>
-				<AppNav active={trackId} />
 			</header>
 
 			<p className="lede">

@@ -1,7 +1,6 @@
 import { EFFORTS, REVIEWS, TRACKS, enabledTrackIds } from '../constants';
 import { dayBreakdown } from '../lib/day';
 import { formatElapsed, formatMinutes, prettyDateLong } from '../lib/time';
-import { AppNav } from './AppNav';
 import { useStride } from '../store/StrideState';
 
 export function DayLog({ date }: { date: string }) {
@@ -18,12 +17,11 @@ export function DayLog({ date }: { date: string }) {
 			<button className="ghost back" type="button" onClick={openHome}>
 				← Today
 			</button>
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow">Daily record</p>
 					<h1>{prettyDateLong(date)}</h1>
 				</div>
-				<AppNav active="home" />
 			</header>
 
 			{!hasCourse ? (
