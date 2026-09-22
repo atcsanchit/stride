@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 're
 import { pythonInfo, runPython } from '../lib/python';
 import type { PythonRunResult } from '../types';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 
 const SNIPPETS: Array<{ id: string; label: string; stdin: string; code: string }> = [
 	{
@@ -136,12 +135,11 @@ export function Lab() {
 
 	return (
 		<div className="page">
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow">Local interpreter</p>
 					<h1>Python lab</h1>
 				</div>
-				<AppNav active="lab" />
 			</header>
 
 			<p className="lede">

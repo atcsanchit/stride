@@ -4,7 +4,6 @@ import { dedupeChoreTicketsForView, sprintLabel, sprintScore } from '../lib/spri
 import { isChoreTicket, isSprintTicket, ticketTags, ticketTimerPaused } from '../lib/ticket';
 import type { Priority, Score, TicketKind, TicketStatus } from '../types';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 import { ChoreTagger } from './ChoreTagger';
 import { EffortPills } from './EffortPills';
 import { PriorityPills } from './PriorityPills';
@@ -149,12 +148,11 @@ export function TicketBoard({ kind }: { kind: TicketKind }) {
 
 	return (
 		<div className={`page sprint-page${maxed ? ' is-max' : ''}${split ? ' is-split' : ''}`}>
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow">{chore ? 'Desk work' : 'Planner'}</p>
 					<h1>{chore ? 'Chores' : currentSprint ? sprintLabel(currentSprint) : 'Sprint'}</h1>
 				</div>
-				<AppNav active={chore ? 'chores' : 'sprint'} />
 			</header>
 
 			{maxed ? null : (

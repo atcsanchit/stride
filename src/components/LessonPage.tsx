@@ -4,7 +4,6 @@ import { lessonGuide } from '../lib/lessons';
 import { challengeForItem } from '../lib/practical';
 import { topicGuide } from '../lib/topic-guides';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 import { BlurtPad } from './BlurtPad';
 import { PracticalChallengeCard } from './PracticalChallengeCard';
 import { TopicGuideCard } from './TopicGuideCard';
@@ -38,14 +37,13 @@ export function LessonPage({ itemId }: { itemId: string }) {
 			<button className="ghost back" type="button" onClick={() => openClass(item.trackId, item.section)}>
 				← {item.section}
 			</button>
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow" style={{ color: meta.accent }}>
 						Lesson · {meta.short}
 					</p>
 					<h1>{item.title}</h1>
 				</div>
-				<AppNav active={item.trackId} />
 			</header>
 			<p className="muted" style={{ marginTop: '-1rem', marginBottom: '1.1rem' }}>
 				Class {item.section}

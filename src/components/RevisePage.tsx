@@ -14,7 +14,6 @@ import {
 import { prettyDate, todayKey, diffDays } from '../lib/time';
 import type { RecallGrade, TrackId } from '../types';
 import { useStride } from '../store/StrideState';
-import { AppNav } from './AppNav';
 import { TopicGuideCard } from './TopicGuideCard';
 
 export function RevisePage() {
@@ -73,12 +72,11 @@ export function RevisePage() {
 
 	return (
 		<div className="page">
-			<header className="topbar">
+			<header className="page-head">
 				<div>
 					<p className="eyebrow">Spaced retrieval</p>
 					<h1>Revise</h1>
 				</div>
-				<AppNav active="revise" />
 			</header>
 
 			<p className="lede">

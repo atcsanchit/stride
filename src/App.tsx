@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { AccountBar } from './components/AccountBar';
+import { AppShell } from './components/AppShell';
 import { CompleteModal } from './components/CompleteModal';
 import { CourseSetup } from './components/CourseSetup';
 import { Dashboard } from './components/Dashboard';
@@ -82,17 +82,18 @@ export default function App() {
 
 	return (
 		<>
-			<AccountBar />
-			{view.name === 'home' ? <Dashboard /> : null}
-			{view.name === 'track' ? <TrackPage trackId={view.trackId} /> : null}
-			{view.name === 'class' ? <ClassPage trackId={view.trackId} section={view.section} /> : null}
-			{view.name === 'lesson' ? <LessonPage itemId={view.itemId} /> : null}
-			{view.name === 'lab' ? <Lab /> : null}
-			{view.name === 'sprint' ? <SprintPage /> : null}
-			{view.name === 'chores' ? <ChoresPage /> : null}
-			{view.name === 'revise' ? <RevisePage /> : null}
-			{view.name === 'day' ? <DayLog date={view.date} /> : null}
-			{view.name === 'settings' ? <ProfileSettings /> : null}
+			<AppShell>
+				{view.name === 'home' ? <Dashboard /> : null}
+				{view.name === 'track' ? <TrackPage trackId={view.trackId} /> : null}
+				{view.name === 'class' ? <ClassPage trackId={view.trackId} section={view.section} /> : null}
+				{view.name === 'lesson' ? <LessonPage itemId={view.itemId} /> : null}
+				{view.name === 'lab' ? <Lab /> : null}
+				{view.name === 'sprint' ? <SprintPage /> : null}
+				{view.name === 'chores' ? <ChoresPage /> : null}
+				{view.name === 'revise' ? <RevisePage /> : null}
+				{view.name === 'day' ? <DayLog date={view.date} /> : null}
+				{view.name === 'settings' ? <ProfileSettings /> : null}
+			</AppShell>
 			<TimerDock />
 			<CompleteModal />
 			{dragging ? (
