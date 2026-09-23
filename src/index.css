@@ -2750,6 +2750,14 @@ select {
 	gap: 0.1rem;
 }
 
+.revise-upcoming em {
+	font-style: normal;
+	color: var(--ink);
+	font-size: 0.92rem;
+	line-height: 1.4;
+	white-space: pre-wrap;
+}
+
 @media (max-width: 1100px) {
 	.app-body {
 		grid-template-columns: 190px minmax(0, 1fr);

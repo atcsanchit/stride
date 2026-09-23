@@ -26,6 +26,7 @@ export type ReviewCard = {
 	lapses: number;
 	reviews: number;
 	cue?: string;
+	blurt?: string;
 };
 
 export type Priority = 0 | 1 | 2;
@@ -118,6 +119,7 @@ export type Completion = {
 	effort: Score;
 	review: Score;
 	notes: string;
+	blurt?: string;
 	completedAt: number;
 	evidenceNotes?: string;
 	evidenceUrls?: string[];

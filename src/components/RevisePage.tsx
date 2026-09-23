@@ -7,10 +7,10 @@ import {
 	dueQueue,
 	intervalAfterGrade,
 	prettyInterval,
-	recallPrompts,
 	reviewedOn,
 	upcomingQueue,
 } from '../lib/revise';
+import { openingNote } from '../lib/recall';
 import { prettyDate, todayKey, diffDays } from '../lib/time';
 import type { RecallGrade, TrackId } from '../types';
 import { useStride } from '../store/StrideState';
@@ -24,6 +24,7 @@ export function RevisePage() {
 	const [allowExtra, setAllowExtra] = useState(Boolean(focusId));
 	const [revealed, setRevealed] = useState(false);
 	const [missed, setMissed] = useState('');
+	const [recall, setRecall] = useState('');
 
 	const doneCount = items.filter((item) => item.done).length;
 	const due = useMemo(() => dueQueue(reviews, items, today, filter), [filter, items, reviews, today]);
@@ -53,11 +54,35 @@ export function RevisePage() {
 	useEffect(() => {
 		setRevealed(false);
 		setMissed('');
+		setRecall('');
 	}, [active?.item.id]);
 
-	const lastNote = active
-		? completions.filter((row) => row.itemId === active.item.id && row.notes.trim()).at(-1)
+	const lastCompletion = active
+		? completions.filter((row) => row.itemId === active.item.id).at(-1)
 		: undefined;
+	const closingNote = lastCompletion?.notes.trim() ?? '';
+	const opening = active
+		? openingNote(active.item.id, active.card.blurt || lastCompletion?.blurt, closingNote)
+		: '';
+
+	const lessonNotes = useMemo(() => {
+		return items
+			.filter((item) => item.done && (filter === 'all' || item.trackId === filter))
+			.map((item) => {
+				const card = reviews.find((entry) => entry.itemId === item.id);
+				const completion = [...completions].reverse().find((entry) => entry.itemId === item.id);
+				const closing = completion?.notes.trim() ?? '';
+				const openingText = openingNote(item.id, card?.blurt || completion?.blurt, closing);
+				if (!openingText && !closing) {
+					return null;
+				}
+				return { item, openingText, closing, dueDate: card?.dueDate };
+			})
+			.filter(
+				(row): row is { item: (typeof items)[number]; openingText: string; closing: string; dueDate: string | undefined } =>
+					row !== null,
+			);
+	}, [completions, filter, items, reviews]);
 	const guide = active ? lessonGuide(active.item) : undefined;
 	const meta = active ? trackMeta(active.item.trackId) : null;
 
@@ -80,8 +105,9 @@ export function RevisePage() {
 			</header>
 
 			<p className="lede">
-				How to learn anything: retrieve first. Blurt for ~10 minutes, then check notes, then rate. Rereading at the start
-				only tests short-term memory. Expanding gaps beat cramming. Stop around {DAILY_REVIEW_CAP}.
+				Revise is only for lessons you have marked Complete. The first review waits until the next day, so a lesson you
+				just finished is under Coming up, not in today&apos;s queue. Write what you remember, then reveal. That writing
+				is saved on the card.
 			</p>
 
 			<div className="revise-stats">
@@ -156,17 +182,34 @@ export function RevisePage() {
 						<p className="revise-cue">Last time you flagged: {active.card.cue}</p>
 					) : null}
 
+					{opening ? (
+						<div className="revise-notes">
+							<p className="field-label">Blurt note</p>
+							<p>{opening}</p>
+						</div>
+					) : (
+						<p className="muted">No blurt note on this lesson. That box is what you write before Start.</p>
+					)}
+					{closingNote ? (
+						<div className="revise-notes">
+							<p className="field-label">Closing note</p>
+							<p>{closingNote}</p>
+						</div>
+					) : null}
+
 					{revealed ? null : (
 						<>
-							<p className="field-label">Blurt — cover the notes</p>
-							<ol className="recall-prompts">
-								{recallPrompts(active.item.trackId).map((prompt) => (
-									<li key={prompt}>{prompt}</li>
-								))}
-							</ol>
+							<label className="field">
+								Write what you remember
+								<textarea
+									value={recall}
+									onChange={(event) => setRecall(event.target.value)}
+									placeholder="Optional. A fresh retrieval. Your saved blurt note stays above."
+								/>
+							</label>
 							<div className="log-actions">
 								<button className="primary" type="button" onClick={() => setRevealed(true)}>
-									I blurted — reveal notes
+									Reveal notes
 								</button>
 								{active.item.trackId === 'dsa' ? (
 									<button type="button" onClick={openLab}>
@@ -182,14 +225,12 @@ export function RevisePage() {
 
 					{revealed ? (
 						<>
-							{lastNote ? (
+							{recall.trim() ? (
 								<div className="revise-notes">
-									<p className="field-label">Your notes from last time</p>
-									<p>{lastNote.notes}</p>
+									<p className="field-label">This retrieval</p>
+									<p>{recall.trim()}</p>
 								</div>
-							) : (
-								<p className="muted">No notes on file for this item. Grade the retrieval anyway.</p>
-							)}
+							) : null}
 							{guide ? <TopicGuideCard guide={guide} accent={meta.accent} title="If you need a restudy pass" /> : null}
 							<label className="field">
 								What was fuzzy? (shown next time)
@@ -247,6 +288,17 @@ export function RevisePage() {
 										<small className="muted">
 											{trackMeta(row.item.trackId).short} · {prettyDate(row.card.dueDate)} · box {row.card.intervalDays}d
 										</small>
+										{(() => {
+											const completion = [...completions].reverse().find((entry) => entry.itemId === row.item.id);
+											const closing = completion?.notes.trim() ?? '';
+											const openingText = openingNote(row.item.id, row.card.blurt || completion?.blurt, closing);
+											return (
+												<>
+													{openingText ? <em>Blurt: {openingText}</em> : null}
+													{closing ? <em>Closing: {closing}</em> : null}
+												</>
+											);
+										})()}
 									</span>
 								</button>
 							</li>
@@ -254,6 +306,39 @@ export function RevisePage() {
 					</ul>
 				</section>
 			) : null}
+
+			<section className="plan" style={{ marginTop: '0.9rem' }}>
+				<div className="plan-head">
+					<div>
+						<p className="eyebrow">Stored with the lesson</p>
+						<h2>Lesson notes</h2>
+					</div>
+				</div>
+				{lessonNotes.length === 0 ? (
+					<p className="muted">
+						Nothing here yet. The blurt is what you write before Start. The closing note is what you write on Complete.
+						Both show here after the lesson is done.
+					</p>
+				) : (
+					<ul className="plan-list">
+						{lessonNotes.map((row) => (
+							<li key={row.item.id}>
+								<button className="revise-upcoming" type="button" onClick={() => openRevise(row.item.id)}>
+									<span>
+										<strong>{row.item.title}</strong>
+										<small className="muted">
+											{trackMeta(row.item.trackId).short}
+											{row.dueDate ? ` · ${prettyDate(row.dueDate)}` : ''}
+										</small>
+										{row.openingText ? <em>Blurt: {row.openingText}</em> : null}
+										{row.closing ? <em>Closing: {row.closing}</em> : null}
+									</span>
+								</button>
+							</li>
+						))}
+					</ul>
+				)}
+			</section>
 
 			{due.length > 1 && active ? (
 				<p className="muted" style={{ marginTop: '0.8rem' }}>
