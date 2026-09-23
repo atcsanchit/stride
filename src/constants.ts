@@ -79,6 +79,10 @@ export function firstName(name: string): string {
 	return name.trim().split(/\s+/).filter(Boolean)[0] ?? 'there';
 }
 
+export function profileLabel(profile: { name: string; displayName?: string }): string {
+	return profile.displayName?.trim() || profile.name;
+}
+
 export function trackMeta(id: TrackId): TrackMeta {
 	const found = TRACKS.find((track) => track.id === id);
 	if (!found) {

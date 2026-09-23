@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { firstName } from '../constants';
+import { firstName, profileLabel } from '../constants';
 import { hasPin } from '../lib/accounts';
 import { useStride } from '../store/StrideState';
 
@@ -78,17 +78,21 @@ export function AccountBar() {
 					onClick={() => setOpen((value) => !value)}
 				>
 					<span className="account-avatar" aria-hidden="true">
-						{firstName(profile.name).slice(0, 1).toUpperCase()}
+						{profile.photo ? (
+							<img src={profile.photo} alt="" />
+						) : (
+							firstName(profileLabel(profile)).slice(0, 1).toUpperCase()
+						)}
 					</span>
 					<span className="account-trigger-copy">
-						<strong>{firstName(profile.name)}</strong>
+						<strong>{firstName(profileLabel(profile))}</strong>
 						<small>Account</small>
 					</span>
 				</button>
 				{open ? (
 					<div className="account-menu" id={menuId} role="menu">
 						<div className="account-menu-head">
-							<strong>{profile.name}</strong>
+							<strong>{profileLabel(profile)}</strong>
 							<small className="muted">{status}</small>
 						</div>
 						<button type="button" role="menuitem" onClick={() => { setOpen(false); openSettings(); }}>

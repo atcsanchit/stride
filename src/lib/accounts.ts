@@ -31,12 +31,43 @@ function openAccounts(): Promise<IDBDatabase> {
 	});
 }
 
+function optionalText(value: string | undefined): string | undefined {
+	const trimmed = value?.trim();
+	return trimmed ? trimmed : undefined;
+}
+
+export type ProfileDetails = {
+	displayName?: string;
+	headline?: string;
+	about?: string;
+	location?: string;
+	link?: string;
+	photo?: string;
+};
+
 function normalizeProfile(row: Profile): Profile {
+	const photo = row.photo?.startsWith('data:image/') ? row.photo : undefined;
 	return {
 		...row,
 		nameKey: row.nameKey || nameKey(row.name),
 		googleEmail: row.googleEmail?.trim().toLowerCase() || undefined,
+		displayName: optionalText(row.displayName),
+		headline: optionalText(row.headline),
+		about: optionalText(row.about),
+		location: optionalText(row.location),
+		link: optionalText(row.link),
+		photo,
 	};
+}
+
+function preferDetail(
+	incoming: string | undefined,
+	current: string | undefined,
+	incomingNewer: boolean,
+): string | undefined {
+	const primary = optionalText(incomingNewer ? incoming : current);
+	const fallback = optionalText(incomingNewer ? current : incoming);
+	return primary || fallback;
 }
 
 export async function loadProfilesFromIdb(): Promise<Profile[]> {
@@ -76,6 +107,7 @@ export async function upsertProfileLocal(incoming: Profile): Promise<void> {
 		return;
 	}
 	const current = (await loadProfilesFromIdb()).find((entry) => entry.id === incoming.id);
+	const incomingNewer = (incoming.lastSeenAt || 0) >= (current?.lastSeenAt || 0);
 	const next = normalizeProfile({
 		...incoming,
 		...current,
@@ -88,6 +120,12 @@ export async function upsertProfileLocal(incoming: Profile): Promise<void> {
 		focusTrack: current?.focusTrack || incoming.focusTrack,
 		createdAt: current?.createdAt || incoming.createdAt,
 		googleEmail: incoming.googleEmail || current?.googleEmail,
+		displayName: preferDetail(incoming.displayName, current?.displayName, incomingNewer),
+		headline: preferDetail(incoming.headline, current?.headline, incomingNewer),
+		about: preferDetail(incoming.about, current?.about, incomingNewer),
+		location: preferDetail(incoming.location, current?.location, incomingNewer),
+		link: preferDetail(incoming.link, current?.link, incomingNewer),
+		photo: preferDetail(incoming.photo, current?.photo, incomingNewer),
 	});
 	await saveProfileIdb(next);
 }
@@ -134,6 +172,28 @@ export async function loadProfiles(): Promise<Profile[]> {
 export async function saveProfile(profile: Profile): Promise<void> {
 	await saveProfileIdb(profile);
 	await mirrorAccounts(await readAccountSessionIdb());
+}
+
+export async function updateProfileDetails(profile: Profile, details: ProfileDetails): Promise<Profile> {
+	const photo = details.photo?.trim() ?? '';
+	if (photo && !photo.startsWith('data:image/')) {
+		throw new Error('Profile photo must be an image.');
+	}
+	if (photo.length > 180_000) {
+		throw new Error('That photo is too large. Try a smaller image.');
+	}
+	const next = normalizeProfile({
+		...profile,
+		displayName: details.displayName,
+		headline: details.headline,
+		about: details.about,
+		location: details.location,
+		link: details.link,
+		photo: photo || undefined,
+		lastSeenAt: Date.now(),
+	});
+	await saveProfile(next);
+	return next;
 }
 
 export async function findProfileById(userId: string): Promise<Profile | undefined> {
