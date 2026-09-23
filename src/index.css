@@ -2182,6 +2182,45 @@ select {
 	font-size: 1.15rem;
 }
 
+.ticket-reason {
+	margin: 0.45rem 0 0;
+	display: grid;
+	gap: 0.15rem;
+}
+
+.ticket-reason span,
+.ticket-reason-inline {
+	color: var(--muted);
+}
+
+.ticket-reason span {
+	font-size: 0.72rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.ticket-reason-inline {
+	display: block;
+	font-size: 0.82rem;
+}
+
+.ticket-hold {
+	margin-top: 0.85rem;
+	padding: 0.9rem 1rem 1rem;
+	border-radius: 16px;
+	border: 1px solid color-mix(in srgb, var(--rose) 45%, var(--line));
+	background: color-mix(in srgb, var(--rose) 10%, var(--bg-2));
+}
+
+.ticket-hold.is-blocked {
+	border-color: color-mix(in srgb, var(--ember) 50%, var(--line));
+	background: color-mix(in srgb, var(--ember) 10%, var(--bg-2));
+}
+
+.ticket-hold .eyebrow {
+	margin-bottom: 0.45rem;
+}
+
 .ticket-note p {
 	margin: 0 0 0.55rem;
 }

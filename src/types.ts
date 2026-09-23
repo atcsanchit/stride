@@ -149,6 +149,7 @@ export type Ticket = {
 	priority: Priority;
 	plannedDate: string;
 	status: TicketStatus;
+	statusReason?: string;
 	createdAt: number;
 	originalTitle?: string;
 };

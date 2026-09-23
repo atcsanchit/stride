@@ -94,14 +94,34 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 	const latestCloseout = closeouts.at(-1);
 	const practicals = ticketPracticalChallenges(ticket, items);
 
+	const [hold, setHold] = useState<'blocked' | 'cancelled' | null>(null);
+	const [reason, setReason] = useState('');
+
 	useEffect(() => {
 		setTitle(ticket.title);
 		setDescription(ticket.description);
 		setScope(ticket.scope);
-	}, [ticket.description, ticket.scope, ticket.title]);
+		setHold(null);
+		setReason('');
+	}, [ticket.description, ticket.id, ticket.scope, ticket.title]);
 
 	function changeStatus(next: TicketStatus) {
+		if (next === 'blocked' || next === 'cancelled') {
+			setHold(next);
+			setReason(ticket.status === next ? (ticket.statusReason ?? '') : '');
+			return;
+		}
+		setHold(null);
 		void setTicketStatus(ticket.id, next);
+	}
+
+	function confirmHold() {
+		if (!hold || !reason.trim()) {
+			return;
+		}
+		void setTicketStatus(ticket.id, hold, reason.trim());
+		setHold(null);
+		setReason('');
 	}
 
 	return (
@@ -123,6 +143,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 				{running ? <span className="muted">timer on</span> : null}
 				{paused ? <span className="muted">timer paused</span> : null}
 			</div>
+			{(ticket.status === 'blocked' || ticket.status === 'cancelled') && ticket.statusReason ? (
+				<p className="ticket-reason">
+					<span>{ticket.status === 'blocked' ? 'Blocked because' : 'Cancelled because'}</span>
+					{ticket.statusReason}
+				</p>
+			) : null}
 			{closed || compact ? (
 				<h3>{ticket.title}</h3>
 			) : (
@@ -289,6 +315,33 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 					<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
 				</>
 			)}
+			{hold ? (
+				<section className={`ticket-hold${hold === 'blocked' ? ' is-blocked' : ''}`}>
+					<p className="eyebrow">{hold === 'blocked' ? 'Blocked' : 'Triage / cancel'}</p>
+					<label className="field">
+						Reason
+						<textarea
+							value={reason}
+							onChange={(event) => setReason(event.target.value)}
+							placeholder={
+								hold === 'blocked'
+									? 'What is in the way? This is required before the ticket is blocked.'
+									: 'Why is this cancelled? This is required before the ticket is dropped.'
+							}
+							rows={3}
+							autoFocus
+						/>
+					</label>
+					<div className="log-actions">
+						<button className="primary" type="button" disabled={!reason.trim()} onClick={confirmHold}>
+							{hold === 'blocked' ? 'Mark blocked' : 'Mark cancelled'}
+						</button>
+						<button type="button" onClick={() => setHold(null)}>
+							Keep current status
+						</button>
+					</div>
+				</section>
+			) : null}
 			<div className="ticket-extra">
 				{done ? null : (
 					<>

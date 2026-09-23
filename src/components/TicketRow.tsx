@@ -48,6 +48,9 @@ export function TicketRow({
 						{running ? ' · timer on' : ''}
 						{paused ? ' · timer paused' : ''}
 					</small>
+					{(ticket.status === 'blocked' || ticket.status === 'cancelled') && ticket.statusReason ? (
+						<small className="ticket-reason-inline">{ticket.statusReason}</small>
+					) : null}
 					{chore
 						? tags.map((tag) => <TagChip key={tag} tag={tag} />)
 						: tracks.map((id) => (
