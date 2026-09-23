@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
 import { trackMeta } from '../constants';
 import { lessonGuide } from '../lib/lessons';
 import { challengeForItem } from '../lib/practical';
+import { openingNote, readRecallDraft } from '../lib/recall';
 import { topicGuide } from '../lib/topic-guides';
 import { useStride } from '../store/StrideState';
 import { BlurtPad } from './BlurtPad';
@@ -9,13 +9,9 @@ import { PracticalChallengeCard } from './PracticalChallengeCard';
 import { TopicGuideCard } from './TopicGuideCard';
 
 export function LessonPage({ itemId }: { itemId: string }) {
-	const { items, startTask, requestComplete, openRevise, openClass, openTrack, openLab, activeSession, completions } =
+	const { items, startTask, requestComplete, openRevise, openClass, openTrack, openLab, activeSession, completions, reviews, saveLessonNote } =
 		useStride();
-	const [unlocked, setUnlocked] = useState(false);
 	const item = items.find((entry) => entry.id === itemId);
-	useEffect(() => {
-		setUnlocked(false);
-	}, [itemId]);
 	if (!item) {
 		return (
 			<div className="page">
@@ -29,8 +25,12 @@ export function LessonPage({ itemId }: { itemId: string }) {
 	const klass = topicGuide(item.trackId, item.section);
 	const running = Boolean(activeSession && activeSession.itemId === item.id);
 	const last = completions.filter((row) => row.itemId === item.id).at(-1);
+	const savedRecall = openingNote(
+		item.id,
+		reviews.find((card) => card.itemId === item.id)?.blurt || last?.blurt,
+		last?.notes,
+	);
 	const challenge = challengeForItem(item);
-	const ready = item.done || unlocked;
 
 	return (
 		<div className="page">
@@ -52,28 +52,29 @@ export function LessonPage({ itemId }: { itemId: string }) {
 				{running ? ' · timer on' : ''}
 			</p>
 
-			<BlurtPad topic={item.title} unlocked={item.done || unlocked} onUnlock={() => setUnlocked(true)} />
+			<BlurtPad
+				itemId={item.id}
+				topic={item.title}
+				saved={savedRecall}
+				onSave={(text) => {
+					void saveLessonNote(item.id, text);
+				}}
+			/>
 
-			{ready ? (
-				<>
-					{guide ? (
-						<TopicGuideCard guide={guide} title="Unblock this lesson" accent={meta.accent} />
-					) : (
-						<section className="plan">
-							<p className="muted">
-								No dedicated write-up yet for this lesson. Open the class notes, or Start and leave your own notes on
-								Complete.
-							</p>
-							{klass ? <TopicGuideCard guide={klass} title="Class notes" accent={meta.accent} /> : null}
-						</section>
-					)}
-
-					{guide?.complexity ? <p className="lesson-complexity">Target: {guide.complexity}</p> : null}
-					{challenge ? <PracticalChallengeCard challenges={[challenge]} /> : null}
-				</>
+			{guide ? (
+				<TopicGuideCard guide={guide} title="This lesson" accent={meta.accent} />
 			) : (
-				<p className="muted">Notes and solution links stay covered until you blurt. That is the session, not a UI trick.</p>
+				<section className="plan">
+					<p className="muted">
+						No dedicated write-up yet for this lesson. Open the class notes, or Start and leave your own notes on
+						Complete.
+					</p>
+					{klass ? <TopicGuideCard guide={klass} title="Class notes" accent={meta.accent} /> : null}
+				</section>
 			)}
+
+			{guide?.complexity ? <p className="lesson-complexity">Target: {guide.complexity}</p> : null}
+			{challenge ? <PracticalChallengeCard challenges={[challenge]} /> : null}
 
 			<div className="log-actions" style={{ marginTop: '1.1rem' }}>
 				{item.done ? (
@@ -82,19 +83,21 @@ export function LessonPage({ itemId }: { itemId: string }) {
 					</button>
 				) : (
 					<>
-						<button type="button" disabled={!ready || running} onClick={() => void startTask(item.id)}>
+						<button
+							type="button"
+							disabled={running}
+							onClick={() => {
+								void saveLessonNote(item.id, readRecallDraft(item.id));
+								void startTask(item.id);
+							}}
+						>
 							Start
 						</button>
-						<button className="primary" type="button" disabled={!ready} onClick={() => requestComplete(item.id)}>
+						<button className="primary" type="button" onClick={() => requestComplete(item.id)}>
 							Complete
 						</button>
 					</>
 				)}
-				{!item.done && !ready ? (
-					<p className="muted" style={{ width: '100%', margin: '0.35rem 0 0' }}>
-						Start and Complete stay locked until you blurt. That is the session.
-					</p>
-				) : null}
 				{item.trackId === 'dsa' ? (
 					<button type="button" onClick={openLab}>
 						Open Lab
@@ -105,9 +108,9 @@ export function LessonPage({ itemId }: { itemId: string }) {
 				</button>
 			</div>
 
-			{ready && last?.notes ? (
+			{last?.notes ? (
 				<section className="plan" style={{ marginTop: '1rem' }}>
-					<p className="eyebrow">Your last notes</p>
+					<p className="eyebrow">Closing note</p>
 					<p>{last.notes}</p>
 				</section>
 			) : null}

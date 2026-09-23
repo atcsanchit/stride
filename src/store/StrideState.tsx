@@ -35,6 +35,7 @@ import { createId, hashText } from '../lib/id';
 import { nameKey } from '../lib/identity';
 import { mergeItems, reconcileItemsWithCompletions } from '../lib/merge';
 import { parseMarkdownRoadmap } from '../lib/parse-roadmap';
+import { readRecallDraft, writeRecallDraft } from '../lib/recall';
 import { applyGrade, prettyInterval, seedReviewCard, syncReviewCards } from '../lib/revise';
 import { clearSession, readSession, writeSession } from '../lib/session';
 import {
@@ -143,6 +144,7 @@ interface StrideContextValue {
 		evidenceUrls?: string[];
 	}) => Promise<void>;
 	gradeReview: (itemId: string, grade: RecallGrade, cue?: string) => Promise<void>;
+	saveLessonNote: (itemId: string, text: string) => Promise<void>;
 	cancelComplete: () => void;
 	addTicket: (input: {
 		kind?: TicketKind;
@@ -248,6 +250,8 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	settingsRef.current = settings;
 	const reviewsRef = useRef(reviews);
 	reviewsRef.current = reviews;
+	const completionsRef = useRef(completions);
+	completionsRef.current = completions;
 	const ticketsRef = useRef(tickets);
 	ticketsRef.current = tickets;
 	const sessionsRef = useRef(sessions);
@@ -847,6 +851,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 					const next = { ...target, done: true, doneAt: now };
 					await putItem(profileId, next);
 					setItems((list) => list.map((entry) => (entry.id === target.id ? next : entry)));
+					const blurt = readRecallDraft(target.id).trim();
 					const completion: Completion = {
 						id: createId(),
 						itemId: target.id,
@@ -860,17 +865,19 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 						effort: input.effort,
 						review: input.review,
 						notes: note,
+						blurt: blurt || undefined,
 						completedAt: now,
 						evidenceNotes: evidenceNotes || undefined,
 						evidenceUrls: evidenceUrls.length ? evidenceUrls : undefined,
 					};
 					await putCompletion(profileId, completion);
 					written.push(completion);
-					if (!reviewsRef.current.some((card) => card.itemId === next.id)) {
-						const card = seedReviewCard(next);
-						await putReview(profileId, card);
-						setReviews((list) => [...list.filter((entry) => entry.itemId !== card.itemId), card]);
-					}
+					const existingCard = reviewsRef.current.find((card) => card.itemId === next.id);
+					const card = existingCard
+						? { ...existingCard, blurt: blurt || existingCard.blurt }
+						: { ...seedReviewCard(next), blurt: blurt || undefined };
+					await putReview(profileId, card);
+					setReviews((list) => [...list.filter((entry) => entry.itemId !== card.itemId), card]);
 				}
 
 				if (written.length === 0) {
@@ -926,6 +933,30 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}
 		},
 		[pendingItemId, pendingTicketId, persistSessions, persistTicket, pushToast, requireProfile],
+	);
+
+	const saveLessonNote = useCallback(
+		async (itemId: string, text: string) => {
+			writeRecallDraft(itemId, text);
+			const profileId = profileRef.current?.id;
+			if (!profileId) {
+				return;
+			}
+			const trimmed = text.trim();
+			const card = reviewsRef.current.find((entry) => entry.itemId === itemId);
+			if (card && (card.blurt ?? '') !== trimmed) {
+				const next = { ...card, blurt: trimmed || undefined };
+				await putReview(profileId, next);
+				setReviews((list) => list.map((entry) => (entry.itemId === itemId ? next : entry)));
+			}
+			const completion = [...completionsRef.current].reverse().find((entry) => entry.itemId === itemId);
+			if (completion && (completion.blurt ?? '') !== trimmed) {
+				const next = { ...completion, blurt: trimmed || undefined };
+				await putCompletion(profileId, next);
+				setCompletions((list) => list.map((entry) => (entry.id === completion.id ? next : entry)));
+			}
+		},
+		[],
 	);
 
 	const gradeReview = useCallback(
@@ -1600,6 +1631,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		requestComplete,
 		submitComplete,
 		gradeReview,
+		saveLessonNote,
 		cancelComplete,
 		addTicket,
 		updateTicket,
