@@ -1,5 +1,5 @@
 import { useMemo, useRef, type CSSProperties } from 'react';
-import { firstName, trackMeta } from '../constants';
+import { firstName, profileLabel, trackMeta } from '../constants';
 import { consistencyScore, suggestedFloor } from '../lib/coach';
 import { DAILY_REVIEW_CAP, dueQueue, reviewedOn } from '../lib/revise';
 import { todayKey, weekdayLabel } from '../lib/time';
@@ -60,7 +60,7 @@ export function Dashboard() {
 			<header className="page-head today-head">
 				<div>
 					<p className="eyebrow">Today</p>
-					<h1>{profile ? `${firstName(profile.name)}` : 'Plan'}</h1>
+					<h1>{profile ? `${firstName(profileLabel(profile))}` : 'Plan'}</h1>
 					<p className="lede today-lede">
 						Blurt first, apply the same day, write one sentence. Watching a video does not mark the heatmap.
 					</p>

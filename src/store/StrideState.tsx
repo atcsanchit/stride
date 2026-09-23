@@ -9,7 +9,7 @@ import {
 	type ReactNode,
 } from 'react';
 import { emptySettings, enabledTrackIds, firstName, isTrackEnabled, TRACKS } from '../constants';
-import { deleteProfile as deleteProfileRecord, assertUniqueUsername, hasPin, loadProfiles, pickProfileForName, readAccountSession, reconcileAccounts, saveProfile, setPin, unlockProfile } from '../lib/accounts';
+import { deleteProfile as deleteProfileRecord, assertUniqueUsername, hasPin, loadProfiles, pickProfileForName, readAccountSession, reconcileAccounts, saveProfile, setPin, unlockProfile, updateProfileDetails, type ProfileDetails } from '../lib/accounts';
 import { buildBackup, downloadBackup, parseBackup } from '../lib/backup';
 import { loadBundledRoadmaps } from '../lib/bundled';
 import { coachNote, todayPlan, trackStats } from '../lib/coach';
@@ -176,6 +176,7 @@ interface StrideContextValue {
 	signIn: (profileId: string, pin?: string) => Promise<void>;
 	signInByName: (name: string, pin?: string) => Promise<void>;
 	setAccountPin: (pin: string) => Promise<void>;
+	updateProfile: (details: ProfileDetails) => Promise<void>;
 	signOut: () => void;
 	removeAccount: (profileId: string) => Promise<void>;
 	exportBackup: () => void;
@@ -1384,6 +1385,17 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		[signIn],
 	);
 
+	const updateProfile = useCallback(
+		async (details: ProfileDetails) => {
+			const current = requireProfile();
+			const next = await updateProfileDetails(current, details);
+			setProfile(next);
+			setProfiles((list) => list.map((entry) => (entry.id === next.id ? next : entry)));
+			pushToast('Profile saved', 'Personal details stay with this account.');
+		},
+		[pushToast, requireProfile],
+	);
+
 	const setAccountPin = useCallback(
 		async (pin: string) => {
 			const current = requireProfile();
@@ -1605,6 +1617,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		signIn,
 		signInByName,
 		setAccountPin,
+		updateProfile,
 		signOut,
 		removeAccount,
 		exportBackup,

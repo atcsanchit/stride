@@ -923,10 +923,69 @@ textarea {
 	border-radius: 50%;
 	display: grid;
 	place-items: center;
+	overflow: hidden;
 	background: color-mix(in srgb, var(--manage) 22%, var(--bg-3));
 	color: var(--manage);
 	font-family: var(--serif);
 	font-size: 0.95rem;
+}
+
+.account-avatar img,
+.profile-photo img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.profile-form {
+	margin-top: 0.85rem;
+}
+
+.profile-photo-row {
+	display: flex;
+	align-items: center;
+	gap: 0.9rem;
+	margin-bottom: 1rem;
+}
+
+.profile-photo {
+	width: 4.6rem;
+	height: 4.6rem;
+	border-radius: 50%;
+	padding: 0;
+	overflow: hidden;
+	display: grid;
+	place-items: center;
+	flex: 0 0 auto;
+	background: color-mix(in srgb, var(--manage) 22%, var(--bg-3));
+	color: var(--manage);
+	font-family: var(--serif);
+	font-size: 1.6rem;
+	border-color: color-mix(in srgb, var(--manage) 45%, var(--line));
+}
+
+.profile-photo-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin-top: 0.45rem;
+}
+
+.profile-split {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.7rem;
+}
+
+.profile-form .primary {
+	margin-top: 0.2rem;
+}
+
+@media (max-width: 640px) {
+	.profile-split {
+		grid-template-columns: 1fr;
+	}
 }
 
 .account-trigger-copy {

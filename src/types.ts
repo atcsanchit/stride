@@ -168,6 +168,12 @@ export type Profile = {
 	createdAt: number;
 	lastSeenAt: number;
 	googleEmail?: string;
+	displayName?: string;
+	headline?: string;
+	about?: string;
+	location?: string;
+	link?: string;
+	photo?: string;
 };
 
 export type UserIdentity = {
