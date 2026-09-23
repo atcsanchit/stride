@@ -134,7 +134,7 @@ interface StrideContextValue {
 	startTask: (itemId: string, ticketId?: string) => Promise<void>;
 	pauseTimer: (ticketId?: string) => Promise<void>;
 	resumeTimer: (ticketId?: string) => Promise<void>;
-	setTicketStatus: (id: string, status: TicketStatus) => Promise<void>;
+	setTicketStatus: (id: string, status: TicketStatus, reason?: string) => Promise<void>;
 	requestComplete: (itemId: string, ticketId?: string) => void;
 	submitComplete: (input: {
 		effort: Score;
@@ -741,7 +741,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	);
 
 	const setTicketStatus = useCallback(
-		async (id: string, status: TicketStatus) => {
+		async (id: string, status: TicketStatus, reason = '') => {
 			const ticket = ticketsRef.current.find((entry) => entry.id === id);
 			if (!ticket) {
 				return;
@@ -749,6 +749,10 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			if (ticket.status === status) {
 				if (status === 'progress') {
 					await startTask('', id);
+				}
+				const why = reason.trim();
+				if ((status === 'blocked' || status === 'cancelled') && why && why !== (ticket.statusReason ?? '')) {
+					await persistTicket(requireProfile().id, { ...ticket, statusReason: why });
 				}
 				return;
 			}
@@ -759,8 +763,16 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				requestComplete('', id);
 				return;
 			}
+			const why = reason.trim();
+			if ((status === 'blocked' || status === 'cancelled') && !why) {
+				return;
+			}
 			const profileId = requireProfile().id;
-			await persistTicket(profileId, { ...ticket, status });
+			await persistTicket(profileId, {
+				...ticket,
+				status,
+				statusReason: status === 'blocked' || status === 'cancelled' ? why : ticket.statusReason,
+			});
 			if (status === 'progress') {
 				await startTask('', id);
 				return;
