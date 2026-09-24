@@ -2221,6 +2221,249 @@ select {
 	margin-bottom: 0.45rem;
 }
 
+.ticket-link {
+	display: grid;
+	gap: 0.55rem;
+	margin: 0.75rem 0 0.95rem;
+}
+
+.ticket-link-block {
+	padding: 0.7rem 0.8rem 0.8rem;
+	border-radius: 14px;
+	border: 1px solid var(--line);
+	background: color-mix(in srgb, var(--shade) 70%, transparent);
+}
+
+.ticket-link-block.is-open {
+	border-color: color-mix(in srgb, var(--manage) 35%, var(--line));
+}
+
+.ticket-link-block.has-wrong-pr {
+	border-color: color-mix(in srgb, var(--ember) 55%, var(--line));
+	background: color-mix(in srgb, var(--ember) 8%, var(--shade));
+}
+
+.ticket-pr-wrong {
+	margin: 0;
+	padding: 0.55rem 0.65rem;
+	border-radius: 10px;
+	border: 1px solid color-mix(in srgb, var(--ember) 50%, var(--line));
+	background: color-mix(in srgb, var(--ember) 16%, transparent);
+	color: color-mix(in srgb, var(--ember) 70%, var(--text));
+	font-size: 0.86rem;
+	line-height: 1.35;
+}
+
+.ticket-pr-wrong a {
+	color: inherit;
+	font-weight: 600;
+	word-break: break-all;
+}
+
+.ticket-link-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.6rem;
+	margin-bottom: 0.4rem;
+}
+
+.ticket-link-head .field-label {
+	margin: 0;
+}
+
+.ticket-pr-tag {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.78rem;
+	letter-spacing: 0.04em;
+	color: var(--manage);
+	background: color-mix(in srgb, var(--manage) 12%, transparent);
+	border: 1px solid color-mix(in srgb, var(--manage) 35%, var(--line));
+	border-radius: 999px;
+	padding: 0.2rem 0.55rem;
+	cursor: pointer;
+}
+
+.ticket-pr-tag.is-pending {
+	color: var(--muted);
+	background: transparent;
+	border-style: dashed;
+	cursor: default;
+}
+
+.ticket-pr-toggle {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--text);
+	text-align: left;
+	cursor: pointer;
+}
+
+.ticket-pr-toggle span:first-child {
+	display: grid;
+	gap: 0.1rem;
+}
+
+.ticket-pr-toggle strong {
+	font-size: 0.92rem;
+	font-weight: 600;
+}
+
+.ticket-pr-toggle em {
+	font-style: normal;
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+.ticket-pr-toggle.is-on em {
+	color: var(--manage);
+}
+
+.ticket-pr-switch {
+	flex: 0 0 auto;
+	width: 2.35rem;
+	height: 1.3rem;
+	border-radius: 999px;
+	border: 1px solid var(--line);
+	background: var(--shade);
+	position: relative;
+	transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ticket-pr-switch::after {
+	content: '';
+	position: absolute;
+	top: 0.12rem;
+	left: 0.12rem;
+	width: 0.95rem;
+	height: 0.95rem;
+	border-radius: 50%;
+	background: var(--muted);
+	transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.ticket-pr-toggle.is-on .ticket-pr-switch {
+	border-color: color-mix(in srgb, var(--manage) 50%, var(--line));
+	background: color-mix(in srgb, var(--manage) 22%, var(--shade));
+}
+
+.ticket-pr-toggle.is-on .ticket-pr-switch::after {
+	transform: translateX(1rem);
+	background: var(--manage);
+}
+
+.ticket-prs {
+	display: grid;
+	gap: 0.45rem;
+	margin-top: 0.7rem;
+	padding-top: 0.7rem;
+	border-top: 1px solid var(--line);
+}
+
+.ticket-pr-repo {
+	margin: 0;
+	font-size: 0.8rem;
+}
+
+.ticket-pr-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+.ticket-pr-list li {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.2rem 0.35rem 0.2rem 0.55rem;
+	border-radius: 999px;
+	border: 1px solid color-mix(in srgb, var(--manage) 30%, var(--line));
+	background: color-mix(in srgb, var(--manage) 8%, transparent);
+}
+
+.ticket-pr-list li.is-wrong {
+	border-color: color-mix(in srgb, var(--ember) 45%, var(--line));
+	background: color-mix(in srgb, var(--ember) 12%, transparent);
+}
+
+.ticket-pr-list a {
+	color: var(--manage);
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 0.78rem;
+	text-decoration: none;
+	max-width: 14rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ticket-pr-list li.is-wrong a {
+	color: color-mix(in srgb, var(--ember) 75%, var(--text));
+}
+
+.ticket-pr-badge {
+	font-size: 0.68rem;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: color-mix(in srgb, var(--ember) 80%, white);
+	padding: 0 0.15rem;
+}
+
+.ticket-pr-remove {
+	border: 0;
+	background: transparent;
+	color: var(--muted);
+	padding: 0 0.25rem;
+	line-height: 1;
+	font-size: 1rem;
+}
+
+.ticket-pr-add {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 0.4rem;
+	align-items: center;
+}
+
+.ticket-pr-add input {
+	min-width: 0;
+}
+
+.ticket-pr-add .primary {
+	padding: 0.5rem 0.75rem;
+}
+
+.ticket-pr-flag {
+	color: color-mix(in srgb, var(--ember) 85%, white);
+	border-color: color-mix(in srgb, var(--ember) 45%, var(--line));
+	background: color-mix(in srgb, var(--ember) 14%, transparent);
+}
+
+.ticket-pr-flag.is-linked {
+	color: color-mix(in srgb, var(--manage) 85%, white);
+	border-color: color-mix(in srgb, var(--manage) 45%, var(--line));
+	background: color-mix(in srgb, var(--manage) 14%, transparent);
+}
+
+.sprint-pane textarea.ticket-scope {
+	min-height: 3.2rem;
+}
+
+.course-repos {
+	display: grid;
+	gap: 0.35rem;
+	margin-top: 0.75rem;
+}
+
 .ticket-note p {
 	margin: 0 0 0.55rem;
 }

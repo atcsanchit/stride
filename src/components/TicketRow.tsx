@@ -1,4 +1,5 @@
 import { EFFORTS, PRIORITIES, REVIEWS, STATUSES, trackMeta } from '../constants';
+import { matchingPullRequests } from '../lib/github-pr';
 import { prettyDate } from '../lib/time';
 import { isChoreTicket, ticketCompletions, ticketTags, ticketTopics } from '../lib/ticket';
 import { isSessionPaused, isSessionRunning, openSessionForTicket } from '../lib/work-session';
@@ -17,7 +18,7 @@ export function TicketRow({
 	hideStatus?: boolean;
 	onOpen: () => void;
 }) {
-	const { items, sessions, spillTicket, completions } = useStride();
+	const { items, sessions, settings, spillTicket, completions } = useStride();
 	const chore = isChoreTicket(ticket);
 	const tags = ticketTags(ticket);
 	const estimate = EFFORTS.find((entry) => entry.value === ticket.estimatedEffort);
@@ -29,6 +30,7 @@ export function TicketRow({
 	const tracks = [...new Set(ticketTopics(ticket, items).map((item) => item.trackId))];
 	const closeout = ticketCompletions(ticket, completions).at(-1);
 	const review = closeout ? REVIEWS.find((entry) => entry.value === closeout.review) : undefined;
+	const linkedPrs = matchingPullRequests(ticket, settings);
 
 	return (
 		<div
@@ -58,6 +60,11 @@ export function TicketRow({
 									{trackMeta(id).short}
 								</span>
 							))}
+					{ticket.needsPr ? (
+						<span className={`tag-chip ticket-pr-flag${linkedPrs.length > 0 ? ' is-linked' : ''}`}>
+							PR
+						</span>
+					) : null}
 				</div>
 			</div>
 			<div className="ticket-row-actions">

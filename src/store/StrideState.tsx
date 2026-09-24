@@ -14,6 +14,7 @@ import { buildBackup, downloadBackup, parseBackup } from '../lib/backup';
 import { loadBundledRoadmaps } from '../lib/bundled';
 import { coachNote, todayPlan, trackStats } from '../lib/coach';
 import { grandfatherEnabledTracks, hasOwnProgress, withEnabledTracks } from '../lib/courses';
+import { keepPullRequests, matchingPullRequests, parseRepoSlug, ticketPrKey, ticketPrReady } from '../lib/github-pr';
 import {
 	deleteRoadmap as deleteRoadmapRecord,
 	deleteReview,
@@ -83,6 +84,7 @@ import type {
 	Ticket,
 	TodayPlan,
 	TicketKind,
+	TicketPullRequest,
 	TicketStatus,
 	ToastMessage,
 	TrackId,
@@ -131,6 +133,7 @@ interface StrideContextValue {
 	setActiveTrack: (trackId: TrackId) => Promise<void>;
 	setTarget: (trackId: TrackId, target: number) => Promise<void>;
 	saveCourses: (tracks: TrackId[], focusTrack?: TrackId) => Promise<void>;
+	saveCourseRepo: (courseId: TrackId, slug: string) => Promise<boolean>;
 	startTask: (itemId: string, ticketId?: string) => Promise<void>;
 	pauseTimer: (ticketId?: string) => Promise<void>;
 	resumeTimer: (ticketId?: string) => Promise<void>;
@@ -153,6 +156,9 @@ interface StrideContextValue {
 		scope: string;
 		topicIds: string[];
 		tags?: string[];
+		courseId?: TrackId;
+		needsPr?: boolean;
+		pullRequests?: TicketPullRequest[];
 		estimatedEffort: Score;
 		priority: Priority;
 		plannedDate: string;
@@ -161,7 +167,20 @@ interface StrideContextValue {
 	updateTicket: (
 		id: string,
 		patch: Partial<
-			Pick<Ticket, 'title' | 'description' | 'scope' | 'topicIds' | 'tags' | 'estimatedEffort' | 'priority' | 'plannedDate'>
+			Pick<
+				Ticket,
+				| 'title'
+				| 'description'
+				| 'scope'
+				| 'topicIds'
+				| 'tags'
+				| 'courseId'
+				| 'needsPr'
+				| 'pullRequests'
+				| 'estimatedEffort'
+				| 'priority'
+				| 'plannedDate'
+			>
 		>,
 	) => Promise<void>;
 	spillTicket: (id: string) => Promise<void>;
@@ -820,8 +839,16 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				return;
 			}
 			const evidenceNotes = input.evidenceNotes?.trim() ?? '';
-			const evidenceUrls = input.evidenceUrls ?? [];
-			if (ticket && ticketNeedsPracticalEvidence(ticket, itemsRef.current)) {
+			const linked = ticket ? matchingPullRequests(ticket, settingsRef.current) : [];
+			const evidenceUrls = input.evidenceUrls?.length ? input.evidenceUrls : linked.map((row) => row.url);
+			if (ticket) {
+				const prGate = ticketPrReady(ticket, settingsRef.current);
+				if (!prGate.ok) {
+					pushToast('Need a pull request', prGate.message);
+					return;
+				}
+			}
+			if (ticket && ticketNeedsPracticalEvidence(ticket, itemsRef.current) && linked.length === 0) {
 				if (!evidenceNotes || evidenceUrls.length === 0) {
 					pushToast(
 						'Need practical evidence',
@@ -1008,6 +1035,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			scope: string;
 			topicIds: string[];
 			tags?: string[];
+			courseId?: TrackId;
+			needsPr?: boolean;
+			pullRequests?: TicketPullRequest[];
 			estimatedEffort: Score;
 			priority: Priority;
 			plannedDate: string;
@@ -1018,13 +1048,28 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			if (!title || (kind === 'sprint' && !currentSprint)) {
 				return;
 			}
+			const profileId = requireProfile().id;
+			const id = createId();
+			const courseId = input.courseId;
+			const needsPr = input.needsPr === true;
+			const pullRequests = keepPullRequests(input.pullRequests);
 			const topicIds =
 				kind === 'chore'
 					? []
-					: [...new Set(input.topicIds)].filter((id) => itemsRef.current.some((entry) => entry.id === id));
-			const profileId = requireProfile().id;
+					: [...new Set(input.topicIds)].filter((topicId) => {
+							const item = itemsRef.current.find((entry) => entry.id === topicId);
+							return Boolean(item && (!courseId || item.trackId === courseId));
+						});
+			let status = input.status ?? 'requirements';
+			if (status === 'done') {
+				const gate = ticketPrReady({ needsPr, courseId, pullRequests }, settingsRef.current);
+				if (!gate.ok) {
+					status = 'requirements';
+					pushToast('Need a pull request', gate.message);
+				}
+			}
 			const ticket: Ticket = {
-				id: createId(),
+				id,
 				kind,
 				sprintId: kind === 'chore' ? '' : currentSprint?.id ?? '',
 				title,
@@ -1032,10 +1077,14 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				scope: input.scope.trim(),
 				topicIds,
 				tags: kind === 'chore' ? [...new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))] : [],
+				courseId,
+				needsPr,
+				prKey: ticketPrKey({ id }),
+				pullRequests,
 				estimatedEffort: input.estimatedEffort,
 				priority: input.priority,
 				plannedDate: input.plannedDate || todayKey(),
-				status: input.status ?? 'requirements',
+				status,
 				createdAt: Date.now(),
 				userId: profileId,
 			};
@@ -1048,14 +1097,27 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}
 			return ticket;
 		},
-		[currentSprint, requireProfile, startTask],
+		[currentSprint, pushToast, requireProfile, startTask],
 	);
 
 	const updateTicket = useCallback(
 		async (
 			id: string,
 			patch: Partial<
-				Pick<Ticket, 'title' | 'description' | 'scope' | 'topicIds' | 'tags' | 'estimatedEffort' | 'priority' | 'plannedDate'>
+				Pick<
+					Ticket,
+					| 'title'
+					| 'description'
+					| 'scope'
+					| 'topicIds'
+					| 'tags'
+					| 'courseId'
+					| 'needsPr'
+					| 'pullRequests'
+					| 'estimatedEffort'
+					| 'priority'
+					| 'plannedDate'
+				>
 			>,
 		) => {
 			const ticket = ticketsRef.current.find((entry) => entry.id === id);
@@ -1063,6 +1125,19 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				return;
 			}
 			const chore = isChoreTicket(ticket);
+			const courseId = patch.courseId !== undefined ? patch.courseId : ticket.courseId;
+			const pullRequests = keepPullRequests(patch.pullRequests ?? ticket.pullRequests);
+			const topicIds = chore
+				? []
+				: (patch.topicIds
+						? [...new Set(patch.topicIds)].filter((topicId) => itemsRef.current.some((entry) => entry.id === topicId))
+						: ticket.topicIds
+					).filter((topicId) => {
+						if (!courseId) {
+							return true;
+						}
+						return itemsRef.current.find((entry) => entry.id === topicId)?.trackId === courseId;
+					});
 			const next: Ticket = {
 				...ticket,
 				...patch,
@@ -1070,11 +1145,11 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				title: patch.title !== undefined ? patch.title.trim() || ticket.title : ticket.title,
 				description: patch.description !== undefined ? patch.description.trim() : ticket.description,
 				scope: patch.scope !== undefined ? patch.scope.trim() : ticket.scope,
-				topicIds: chore
-					? []
-					: patch.topicIds
-						? [...new Set(patch.topicIds)].filter((topicId) => itemsRef.current.some((entry) => entry.id === topicId))
-						: ticket.topicIds,
+				topicIds,
+				courseId,
+				needsPr: patch.needsPr !== undefined ? patch.needsPr === true : ticket.needsPr,
+				prKey: ticket.prKey || ticketPrKey(ticket),
+				pullRequests,
 				tags: chore
 					? patch.tags
 						? [...new Set(patch.tags.map((tag) => tag.trim()).filter(Boolean))]
@@ -1222,8 +1297,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				ticket.status === 'done' || ticket.status === 'cancelled' || ticket.status === 'progress'
 					? 'ready'
 					: ticket.status;
+			const cloneId = createId();
 			const clone: Ticket = {
-				id: createId(),
+				id: cloneId,
 				userId: profileId,
 				kind: ticket.kind,
 				sprintId: ticket.sprintId,
@@ -1232,6 +1308,10 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				scope: ticket.scope,
 				topicIds: [...ticket.topicIds],
 				tags: [...ticket.tags],
+				courseId: ticket.courseId,
+				needsPr: ticket.needsPr,
+				prKey: ticketPrKey({ id: cloneId }),
+				pullRequests: ticket.pullRequests ? [...ticket.pullRequests] : undefined,
 				estimatedEffort: ticket.estimatedEffort,
 				priority: ticket.priority,
 				plannedDate: ticket.plannedDate,
@@ -1365,6 +1445,27 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			);
 		},
 		[pushToast, requireProfile],
+	);
+
+	const saveCourseRepo = useCallback(
+		async (courseId: TrackId, slug: string) => {
+			const text = slug.trim();
+			const parsed = text ? parseRepoSlug(text) : null;
+			if (text && !parsed) {
+				return false;
+			}
+			const courseRepos = { ...settingsRef.current.courseRepos };
+			if (!parsed) {
+				delete courseRepos[courseId];
+			} else {
+				courseRepos[courseId] = `${parsed.owner}/${parsed.repo}`;
+			}
+			const next = { ...settingsRef.current, courseRepos };
+			setSettings(next);
+			await saveSettings(requireProfile().id, next);
+			return true;
+		},
+		[requireProfile],
 	);
 
 	const createProfile = useCallback(
@@ -1636,6 +1737,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		setActiveTrack,
 		setTarget,
 		saveCourses,
+		saveCourseRepo,
 		startTask,
 		pauseTimer,
 		resumeTimer,

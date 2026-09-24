@@ -11,6 +11,7 @@ import { StatusPills } from './StatusPills';
 import { EffortPills } from './EffortPills';
 import { PriorityPills } from './PriorityPills';
 import { TagChip } from './TagChip';
+import { TicketCourseFields } from './TicketCourseFields';
 import { TopicTagger } from './TopicTagger';
 import { PracticalChallengeCard } from './PracticalChallengeCard';
 
@@ -71,6 +72,7 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 		spillTicket,
 		cloneTicket,
 		completions,
+		settings,
 	} = useStride();
 	const [title, setTitle] = useState(ticket.title);
 	const [description, setDescription] = useState(ticket.description);
@@ -263,6 +265,7 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 					<label className="field">
 						Scope
 						<textarea
+							className="ticket-scope"
 							value={scope}
 							onChange={(event) => setScope(event.target.value)}
 							onBlur={() => {
@@ -273,46 +276,66 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 							placeholder="In / out of scope"
 						/>
 					</label>
+					<TicketCourseFields
+						ticket={ticket}
+						settings={settings}
+						disabled={closed}
+						onChange={(patch) => {
+							if (patch.courseId && patch.courseId !== ticket.courseId) {
+								const topicIds = ticket.topicIds.filter(
+									(id) => items.find((item) => item.id === id)?.trackId === patch.courseId,
+								);
+								void updateTicket(ticket.id, { ...patch, topicIds });
+								return;
+							}
+							void updateTicket(ticket.id, patch);
+						}}
+					/>
 					{chore ? (
 						<ChoreTagger selected={tags} onChange={(next) => void updateTicket(ticket.id, { tags: next })} />
-					) : (
+					) : ticket.courseId ? (
 						<TopicTagger
 							selected={ticket.topicIds}
 							onChange={(topicIds) => void updateTicket(ticket.id, { topicIds })}
 							items={items}
+							lockTrack={ticket.courseId}
 						/>
+					) : (
+						<p className="muted">Choose a course to tag lessons.</p>
 					)}
 					<PracticalChallengeCard challenges={practicals} />
-					<EffortPills
-						value={ticket.estimatedEffort}
-						onChange={(next) => void updateTicket(ticket.id, { estimatedEffort: next })}
-					/>
-					<PriorityPills
-						value={ticket.priority}
-						onChange={(next) => void updateTicket(ticket.id, { priority: next })}
-					/>
-					<label className="field">
-						Day
-						{chore ? (
-							<input
-								type="date"
-								value={ticket.plannedDate}
-								onChange={(event) => void updateTicket(ticket.id, { plannedDate: event.target.value })}
-							/>
-						) : (
-							<select
-								value={ticket.plannedDate}
-								onChange={(event) => void updateTicket(ticket.id, { plannedDate: event.target.value })}
-							>
-								{days.map((day) => (
-									<option key={day} value={day}>
-										{prettyDate(day)}
-									</option>
-								))}
-							</select>
-						)}
-					</label>
-					<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+					<div className="ticket-meta-grid">
+						<EffortPills
+							value={ticket.estimatedEffort}
+							onChange={(next) => void updateTicket(ticket.id, { estimatedEffort: next })}
+						/>
+						<PriorityPills
+							value={ticket.priority}
+							onChange={(next) => void updateTicket(ticket.id, { priority: next })}
+						/>
+						<label className="field" style={{ marginBottom: 0 }}>
+							Day
+							{chore ? (
+								<input
+									type="date"
+									value={ticket.plannedDate}
+									onChange={(event) => void updateTicket(ticket.id, { plannedDate: event.target.value })}
+								/>
+							) : (
+								<select
+									value={ticket.plannedDate}
+									onChange={(event) => void updateTicket(ticket.id, { plannedDate: event.target.value })}
+								>
+									{days.map((day) => (
+										<option key={day} value={day}>
+											{prettyDate(day)}
+										</option>
+									))}
+								</select>
+							)}
+						</label>
+						<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+					</div>
 				</>
 			)}
 			{hold ? (

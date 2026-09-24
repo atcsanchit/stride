@@ -7,14 +7,16 @@ export function TopicTagger({
 	selected,
 	onChange,
 	items,
+	lockTrack,
 }: {
 	selected: string[];
 	onChange: (ids: string[]) => void;
 	items: RoadmapItem[];
+	lockTrack?: TrackId;
 }) {
 	const { settings } = useStride();
 	const [query, setQuery] = useState('');
-	const [trackId, setTrackId] = useState<TrackId | 'all'>('all');
+	const [trackId, setTrackId] = useState<TrackId | 'all'>(lockTrack ?? 'all');
 	const courses = TRACKS.filter((track) => enabledTrackIds(settings).includes(track.id));
 	const chosen = useMemo(() => {
 		const byId = new Map(items.map((item) => [item.id, item]));
@@ -25,7 +27,7 @@ export function TopicTagger({
 		return items
 			.filter((item) => !selected.includes(item.id))
 			.filter((item) => enabledTrackIds(settings).includes(item.trackId))
-			.filter((item) => trackId === 'all' || item.trackId === trackId)
+			.filter((item) => (lockTrack ? item.trackId === lockTrack : trackId === 'all' || item.trackId === trackId))
 			.filter((item) => {
 				if (!needle) {
 					return true;
@@ -33,7 +35,7 @@ export function TopicTagger({
 				return `${item.section} ${item.subsection} ${item.title}`.toLowerCase().includes(needle);
 			})
 			.slice(0, 8);
-	}, [items, query, selected, settings, trackId]);
+	}, [items, lockTrack, query, selected, settings, trackId]);
 
 	return (
 		<div className="topic-tagger">
@@ -58,6 +60,7 @@ export function TopicTagger({
 					No topics tagged yet. Search the loaded course and add them as tags.
 				</p>
 			)}
+			{lockTrack ? null : (
 			<div className="meta-row" style={{ marginTop: 0 }}>
 				<button className={trackId === 'all' ? 'pill is-on' : 'pill'} type="button" onClick={() => setTrackId('all')}>
 					All
@@ -73,6 +76,7 @@ export function TopicTagger({
 					</button>
 				))}
 			</div>
+			)}
 			<label className="field">
 				Tag course topics
 				<input

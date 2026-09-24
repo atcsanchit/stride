@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { REVIEWS } from '../constants';
+import { ticketPrReady } from '../lib/github-pr';
 import { parseGitHubUrls, ticketNeedsPracticalEvidence, ticketPracticalChallenges } from '../lib/practical';
 import { formatElapsed } from '../lib/time';
 import { ticketTopics } from '../lib/ticket';
@@ -10,7 +11,16 @@ import { EffortPills } from './EffortPills';
 import { PracticalChallengeCard } from './PracticalChallengeCard';
 
 export function CompleteModal() {
-	const { pendingItemId, pendingTicketId, items, tickets, activeSession, submitComplete, cancelComplete } = useStride();
+	const {
+		pendingItemId,
+		pendingTicketId,
+		items,
+		tickets,
+		settings,
+		activeSession,
+		submitComplete,
+		cancelComplete,
+	} = useStride();
 	const [effort, setEffort] = useState<Score>(3);
 	const [review, setReview] = useState<Score>(3);
 	const [notes, setNotes] = useState('');
@@ -24,7 +34,11 @@ export function CompleteModal() {
 	const ticket = pendingTicketId ? tickets.find((entry) => entry.id === pendingTicketId) : undefined;
 	const tagged = ticket && ticket.kind !== 'chore' ? ticketTopics(ticket, items).filter((entry) => !entry.done) : [];
 	const challenges = ticket ? ticketPracticalChallenges(ticket, items) : [];
-	const needsEvidence = Boolean(ticket && ticketNeedsPracticalEvidence(ticket, items));
+	const prGate = ticket ? ticketPrReady(ticket, settings) : ({ ok: true } as const);
+	const missingPr = !prGate.ok;
+	const needsEvidence = Boolean(
+		ticket && ticketNeedsPracticalEvidence(ticket, items) && (ticket.pullRequests?.length ?? 0) === 0,
+	);
 	const githubUrls = parseGitHubUrls(evidenceLinks);
 	const title = item?.title ?? ticket?.title ?? 'Task';
 	const elapsed =
@@ -39,6 +53,9 @@ export function CompleteModal() {
 				className="modal"
 				onSubmit={(event) => {
 					event.preventDefault();
+					if (missingPr) {
+						return;
+					}
 					if (needsEvidence && (!evidenceNotes.trim() || githubUrls.length === 0)) {
 						return;
 					}
@@ -103,6 +120,7 @@ export function CompleteModal() {
 						minLength={12}
 					/>
 				</label>
+				{missingPr && !prGate.ok ? <p className="error">{prGate.message}</p> : null}
 				{needsEvidence ? (
 					<>
 						<label className="field">
@@ -132,7 +150,7 @@ export function CompleteModal() {
 					<button
 						className="primary"
 						type="submit"
-						disabled={needsEvidence && (!evidenceNotes.trim() || githubUrls.length === 0)}
+						disabled={missingPr || (needsEvidence && (!evidenceNotes.trim() || githubUrls.length === 0))}
 					>
 						Save
 					</button>

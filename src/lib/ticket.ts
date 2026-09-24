@@ -6,6 +6,7 @@ import type {
 	Score,
 	Ticket,
 	TicketKind,
+	TicketPullRequest,
 	TicketStatus,
 	TrackId,
 	WorkSession,
@@ -107,6 +108,26 @@ export function normalizePriority(value: number | undefined): Priority {
 	return 1;
 }
 
+function normalizePullRequests(value: TicketPullRequest[] | undefined): TicketPullRequest[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+	const seen = new Set<string>();
+	const next: TicketPullRequest[] = [];
+	for (const row of value) {
+		if (!row?.url || !row.owner || !row.repo || !row.number) {
+			continue;
+		}
+		const url = row.url.trim();
+		if (seen.has(url)) {
+			continue;
+		}
+		seen.add(url);
+		next.push({ url, owner: row.owner, repo: row.repo, number: row.number });
+	}
+	return next;
+}
+
 export function normalizeTicket(raw: RawTicket): Ticket {
 	const kind = normalizeTicketKind(raw.kind);
 	const topicIds =
@@ -124,6 +145,11 @@ export function normalizeTicket(raw: RawTicket): Ticket {
 		priority: normalizePriority(raw.priority),
 		plannedDate: raw.plannedDate,
 		status: normalizeTicketStatus(raw.status),
+		statusReason: typeof raw.statusReason === 'string' ? raw.statusReason : undefined,
+		courseId: raw.courseId,
+		needsPr: raw.needsPr === true,
+		prKey: typeof raw.prKey === 'string' ? raw.prKey : undefined,
+		pullRequests: normalizePullRequests(raw.pullRequests),
 		createdAt: raw.createdAt,
 		userId: typeof (raw as { userId?: unknown }).userId === 'string' ? (raw as { userId: string }).userId : undefined,
 		originalTitle:
