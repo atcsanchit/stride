@@ -194,7 +194,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 					) : (
 						<p className="muted">No course topics tagged.</p>
 					)}
-					<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+					<StatusPills
+						value={ticket.status}
+						onChange={changeStatus}
+						locked={done}
+						allowWhenLocked={['cancelled']}
+					/>
 					<PracticalChallengeCard challenges={practicals} compact />
 					{done && latestCloseout ? <CloseoutCard record={latestCloseout} /> : null}
 				</>
@@ -238,7 +243,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 						</LockedBlock>
 					</div>
 					<PracticalChallengeCard challenges={practicals} />
-					<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+					<StatusPills
+						value={ticket.status}
+						onChange={changeStatus}
+						locked={done}
+						allowWhenLocked={['cancelled']}
+					/>
 					{done ? (
 						closeouts.length > 0 ? (
 							closeouts.map((record) => <CloseoutCard key={record.id} record={record} />)
@@ -334,7 +344,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 								</select>
 							)}
 						</label>
-						<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+						<StatusPills
+							value={ticket.status}
+							onChange={changeStatus}
+							locked={done}
+							allowWhenLocked={['cancelled']}
+						/>
 					</div>
 				</>
 			)}
@@ -398,9 +413,21 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 						Clone to next sprint
 					</button>
 				)}
-				{compact || done ? null : (
-					<button className="ticket-remove" type="button" onClick={() => void removeTicket(ticket.id)}>
-						Remove
+				{compact ? null : (
+					<button
+						className="ticket-remove"
+						type="button"
+						onClick={() => {
+							if (
+								typeof window !== 'undefined' &&
+								!window.confirm(`Move "${ticket.title}" to trash? This removes it from the board.`)
+							) {
+								return;
+							}
+							void removeTicket(ticket.id);
+						}}
+					>
+						Move to trash
 					</button>
 				)}
 			</div>
