@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { TRACKS, enabledTrackIds, firstName, profileLabel, trackMeta } from '../constants';
 import { readProfilePhoto } from '../lib/photo';
-import type { TrackId } from '../types';
+import type { Settings, TrackId } from '../types';
 import { useStride } from '../store/StrideState';
 import { CoursePicker } from './CoursePicker';
 
 export function ProfileSettings() {
-	const { settings, saveCourses, profile, updateProfile } = useStride();
+	const { settings, saveCourses, saveCourseRepo, profile, updateProfile } = useStride();
 	const selected = enabledTrackIds(settings);
 	const fileRef = useRef<HTMLInputElement>(null);
 	const [displayName, setDisplayName] = useState('');
@@ -179,6 +179,14 @@ export function ProfileSettings() {
 				</p>
 			</section>
 			<section className="plan">
+				<p className="eyebrow">GitHub</p>
+				<h2>One repository per course</h2>
+				<p className="muted">
+					A ticket belongs to one course and only accepts pull requests from that course’s repository.
+				</p>
+				<CourseRepos settings={settings} onSave={saveCourseRepo} />
+			</section>
+			<section className="plan">
 				<p className="eyebrow">Career field</p>
 				<h2>Coach protects this if DSA takes over</h2>
 				<div className="meta-row">
@@ -197,6 +205,57 @@ export function ProfileSettings() {
 					})}
 				</div>
 			</section>
+		</div>
+	);
+}
+
+function CourseRepos({
+	settings,
+	onSave,
+}: {
+	settings: Settings;
+	onSave: (courseId: TrackId, slug: string) => Promise<boolean>;
+}) {
+	const [drafts, setDrafts] = useState<Partial<Record<TrackId, string>>>({});
+	const [error, setError] = useState('');
+
+	return (
+		<div className="course-repos">
+			{TRACKS.map((track) => {
+				const saved = settings.courseRepos?.[track.id] ?? '';
+				const value = drafts[track.id] ?? saved;
+				return (
+					<label className="field" key={track.id}>
+						{track.label}
+						<input
+							value={value}
+							placeholder="owner/repo"
+							onChange={(event) => {
+								setDrafts((current) => ({ ...current, [track.id]: event.target.value }));
+								setError('');
+							}}
+							onBlur={() => {
+								const next = (drafts[track.id] ?? saved).trim();
+								if (next === saved) {
+									return;
+								}
+								void onSave(track.id, next).then((ok) => {
+									if (!ok) {
+										setError(`${track.label} needs owner/repo, like you/dsa.`);
+										return;
+									}
+									setDrafts((current) => {
+										const copy = { ...current };
+										delete copy[track.id];
+										return copy;
+									});
+								});
+							}}
+						/>
+					</label>
+				);
+			})}
+			{error ? <p className="error">{error}</p> : null}
 		</div>
 	);
 }

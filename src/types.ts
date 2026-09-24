@@ -34,6 +34,13 @@ export type Score = 1 | 2 | 3 | 4 | 5;
 export type TicketStatus = 'requirements' | 'ready' | 'progress' | 'blocked' | 'done' | 'cancelled';
 export type TicketKind = 'sprint' | 'chore';
 
+export type TicketPullRequest = {
+	url: string;
+	owner: string;
+	repo: string;
+	number: number;
+};
+
 export type PythonRunResult = {
 	ok: boolean;
 	bin?: string;
@@ -150,6 +157,10 @@ export type Ticket = {
 	plannedDate: string;
 	status: TicketStatus;
 	statusReason?: string;
+	courseId?: TrackId;
+	needsPr?: boolean;
+	prKey?: string;
+	pullRequests?: TicketPullRequest[];
 	createdAt: number;
 	originalTitle?: string;
 };
@@ -159,6 +170,7 @@ export type Settings = {
 	dailyTargets: Record<TrackId, number>;
 	focusTrack: TrackId;
 	enabledTracks: TrackId[];
+	courseRepos?: Partial<Record<TrackId, string>>;
 };
 
 export type Profile = {

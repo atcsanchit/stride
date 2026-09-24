@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { addDays, clampDate, datesInclusive, prettyDate, todayKey, weekdayLabel, weekEnd, weekStart } from '../lib/time';
 import { dedupeChoreTicketsForView, sprintLabel, sprintScore } from '../lib/sprint';
 import { isChoreTicket, isSprintTicket, ticketTags, ticketTimerPaused } from '../lib/ticket';
-import type { Priority, Score, TicketKind, TicketStatus } from '../types';
+import type { Priority, Score, TicketKind, TicketPullRequest, TicketStatus, TrackId } from '../types';
 import { useStride } from '../store/StrideState';
 import { ChoreTagger } from './ChoreTagger';
 import { EffortPills } from './EffortPills';
@@ -12,6 +12,7 @@ import { StatusPills } from './StatusPills';
 import { TicketCard } from './TicketCard';
 import { TicketRow } from './TicketRow';
 import { TicketStatusGroups } from './TicketStatusGroups';
+import { TicketCourseFields } from './TicketCourseFields';
 import { TopicTagger } from './TopicTagger';
 import { TagChip } from './TagChip';
 
@@ -408,11 +409,14 @@ function NewTicketForm({
 	defaultDay: string;
 	onCreated: (id: string) => void;
 }) {
-	const { items, addTicket } = useStride();
+	const { items, settings, addTicket } = useStride();
 	const chore = kind === 'chore';
 	const [title, setTitle] = useState('');
 	const [description, setDescription] = useState('');
 	const [scope, setScope] = useState('');
+	const [courseId, setCourseId] = useState<TrackId | undefined>();
+	const [needsPr, setNeedsPr] = useState(false);
+	const [pullRequests, setPullRequests] = useState<TicketPullRequest[]>([]);
 	const [topicIds, setTopicIds] = useState<string[]>([]);
 	const [tags, setTags] = useState<string[]>([]);
 	const [estimatedEffort, setEstimatedEffort] = useState<Score>(3);
@@ -431,6 +435,9 @@ function NewTicketForm({
 					scope,
 					topicIds: chore ? [] : topicIds,
 					tags: chore ? tags : [],
+					courseId,
+					needsPr,
+					pullRequests,
 					estimatedEffort,
 					priority,
 					plannedDate,
@@ -461,31 +468,58 @@ function NewTicketForm({
 			</label>
 			<label className="field">
 				Scope
-				<textarea value={scope} onChange={(event) => setScope(event.target.value)} placeholder="In scope / out of scope" />
+				<textarea
+					className="ticket-scope"
+					value={scope}
+					onChange={(event) => setScope(event.target.value)}
+					placeholder="In scope / out of scope"
+				/>
 			</label>
+			<TicketCourseFields
+				ticket={{ id: '', courseId, needsPr, pullRequests }}
+				settings={settings}
+				onChange={(patch) => {
+					if (patch.courseId !== undefined && patch.courseId !== courseId) {
+						setCourseId(patch.courseId);
+						setTopicIds((current) =>
+							current.filter((id) => items.find((item) => item.id === id)?.trackId === patch.courseId),
+						);
+					}
+					if (patch.needsPr !== undefined) {
+						setNeedsPr(patch.needsPr);
+					}
+					if (patch.pullRequests) {
+						setPullRequests(patch.pullRequests);
+					}
+				}}
+			/>
 			{chore ? (
 				<ChoreTagger selected={tags} onChange={setTags} />
+			) : courseId ? (
+				<TopicTagger selected={topicIds} onChange={setTopicIds} items={items} lockTrack={courseId} />
 			) : (
-				<TopicTagger selected={topicIds} onChange={setTopicIds} items={items} />
+				<p className="muted">Choose a course to tag lessons.</p>
 			)}
-			<EffortPills value={estimatedEffort} onChange={setEstimatedEffort} />
-			<PriorityPills value={priority} onChange={setPriority} />
-			<StatusPills value={status} onChange={setStatus} />
-			<label className="field">
-				Day
-				{chore ? (
-					<input type="date" value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} />
-				) : (
-					<select value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)}>
-						{days.map((day) => (
-							<option key={day} value={day}>
-								{prettyDate(day)}
-								{day === todayKey() ? ' · today' : ''}
-							</option>
-						))}
-					</select>
-				)}
-			</label>
+			<div className="ticket-meta-grid">
+				<EffortPills value={estimatedEffort} onChange={setEstimatedEffort} />
+				<PriorityPills value={priority} onChange={setPriority} />
+				<StatusPills value={status} onChange={setStatus} omit={['done']} />
+				<label className="field" style={{ marginBottom: 0 }}>
+					Day
+					{chore ? (
+						<input type="date" value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)} />
+					) : (
+						<select value={plannedDate} onChange={(event) => setPlannedDate(event.target.value)}>
+							{days.map((day) => (
+								<option key={day} value={day}>
+									{prettyDate(day)}
+									{day === todayKey() ? ' · today' : ''}
+								</option>
+							))}
+						</select>
+					)}
+				</label>
+			</div>
 			<button className="primary" type="submit">
 				{chore ? 'Create chore' : 'Create ticket'}
 			</button>
