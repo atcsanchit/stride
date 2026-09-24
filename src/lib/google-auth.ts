@@ -5,6 +5,8 @@ const SCOPE = [
 ].join(' ');
 const EMAIL_KEY = 'stride-drive-email';
 const CONNECTED_KEY = 'stride-drive-connected';
+/** Survives refresh in this browser. Cleared on Disconnect / Sign out. */
+const TOKEN_KEY = 'stride-drive-token';
 
 type TokenClient = {
 	requestAccessToken: (opts?: { prompt?: string }) => void;
@@ -15,6 +17,11 @@ type TokenResponse = {
 	expires_in?: number | string;
 	error?: string;
 	error_description?: string;
+};
+
+type StoredToken = {
+	token: string;
+	expiresAt: number;
 };
 
 declare global {
@@ -38,6 +45,55 @@ let scriptPromise: Promise<void> | null = null;
 let token = '';
 let tokenExpiresAt = 0;
 let client: TokenClient | null = null;
+
+function readStoredToken(): StoredToken | null {
+	try {
+		const raw = localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY);
+		if (!raw) {
+			return null;
+		}
+		const parsed = JSON.parse(raw) as StoredToken;
+		if (!parsed?.token || !parsed.expiresAt || Date.now() >= parsed.expiresAt) {
+			localStorage.removeItem(TOKEN_KEY);
+			sessionStorage.removeItem(TOKEN_KEY);
+			return null;
+		}
+		// Prefer localStorage going forward (survives refresh reliably).
+		localStorage.setItem(TOKEN_KEY, raw);
+		sessionStorage.removeItem(TOKEN_KEY);
+		return parsed;
+	} catch {
+		return null;
+	}
+}
+
+function writeStoredToken(accessToken: string, expiresAt: number): void {
+	try {
+		localStorage.setItem(TOKEN_KEY, JSON.stringify({ token: accessToken, expiresAt }));
+	} catch {
+		// ignore
+	}
+}
+
+function clearStoredToken(): void {
+	try {
+		localStorage.removeItem(TOKEN_KEY);
+		sessionStorage.removeItem(TOKEN_KEY);
+	} catch {
+		// ignore
+	}
+}
+
+function hydrateTokenFromSession(): void {
+	const stored = readStoredToken();
+	if (!stored) {
+		return;
+	}
+	token = stored.token;
+	tokenExpiresAt = stored.expiresAt;
+}
+
+hydrateTokenFromSession();
 
 export function googleClientId(): string {
 	return (import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '').trim();
@@ -66,6 +122,7 @@ export function driveRemembered(): boolean {
 export function clearDriveSession(): void {
 	token = '';
 	tokenExpiresAt = 0;
+	clearStoredToken();
 	try {
 		localStorage.removeItem(EMAIL_KEY);
 		localStorage.removeItem(CONNECTED_KEY);
@@ -75,9 +132,15 @@ export function clearDriveSession(): void {
 }
 
 export function currentAccessToken(): string | null {
+	if (!token || Date.now() >= tokenExpiresAt) {
+		hydrateTokenFromSession();
+	}
 	if (token && Date.now() < tokenExpiresAt) {
 		return token;
 	}
+	token = '';
+	tokenExpiresAt = 0;
+	clearStoredToken();
 	return null;
 }
 
@@ -157,6 +220,7 @@ function tokenError(result: TokenResponse, fallback: string): Error {
 export function dropGoogleAccessToken(): void {
 	token = '';
 	tokenExpiresAt = 0;
+	clearStoredToken();
 }
 
 export function requestGoogleToken(
@@ -197,6 +261,7 @@ export function requestGoogleToken(
 				const seconds = Number(result.expires_in ?? 3600);
 				token = result.access_token;
 				tokenExpiresAt = Date.now() + Math.max(60, seconds - 60) * 1000;
+				writeStoredToken(token, tokenExpiresAt);
 				void readEmail(token).then((email) => {
 					if (isWorkEmail(email)) {
 						dropGoogleAccessToken();

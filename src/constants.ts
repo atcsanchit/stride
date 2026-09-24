@@ -40,6 +40,7 @@ export const DEFAULT_TARGETS: Record<TrackId, number> = {
 
 export const BACKUP_KIND = 'stride-personal-backup' as const;
 export const SESSION_KEY = 'stride-personal-session';
+export const VIEW_KEY = 'stride-personal-view';
 export const USERS_INDEX_KEY = 'stride-personal-users';
 export const ACCOUNTS_DB = 'stride-personal-accounts';
 export const LEGACY_PROGRESS_DB = 'stride-tracker';

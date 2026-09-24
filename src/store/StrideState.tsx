@@ -38,7 +38,7 @@ import { mergeItems, reconcileItemsWithCompletions } from '../lib/merge';
 import { parseMarkdownRoadmap } from '../lib/parse-roadmap';
 import { readRecallDraft, writeRecallDraft } from '../lib/recall';
 import { applyGrade, prettyInterval, seedReviewCard, syncReviewCards } from '../lib/revise';
-import { clearSession, readSession, writeSession } from '../lib/session';
+import { clearSession, readSession, rememberPinUnlock, restoreView, writeSession, writeView } from '../lib/session';
 import {
 	attachDriveLeaveSync,
 	disconnectGoogleDrive,
@@ -52,6 +52,7 @@ import {
 	flushDriveSync,
 	type DriveStatus,
 } from '../lib/drive-sync';
+import { rememberedDriveEmail } from '../lib/google-auth';
 import { addDays, todayKey, weekEnd, weekStart } from '../lib/time';
 import { followingSprintRange, originalTicketTitle, previousSprintRange, sprintLabel, withSpiloverTitle } from '../lib/sprint';
 import { ticketNeedsPracticalEvidence } from '../lib/practical';
@@ -276,6 +277,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const sessionsRef = useRef(sessions);
 	sessionsRef.current = sessions;
 	const sprintsRef = useRef(sprints);
+	const bootGen = useRef(0);
 	sprintsRef.current = sprints;
 
 	const pushToast = useCallback((title: string, body: string) => {
@@ -499,44 +501,61 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			setPendingItemId(null);
 			setPendingTicketId('');
 			setSettings(seeded.settings);
-			setView({ name: 'home' });
+			setView(restoreView(seeded.settings));
 			setPhase(needsCourses ? 'courses' : 'app');
 		},
 		[seedBundled],
 	);
 
 	useEffect(() => {
-		let cancelled = false;
+		if (phase === 'app' || phase === 'courses') {
+			writeView(view);
+		}
+	}, [phase, view]);
+
+	useEffect(() => {
+		const bootId = ++bootGen.current;
 		(async () => {
 			try {
 				const restored = await restoreFromDrive(false);
-				if (!cancelled && restored.users.length > 0) {
+				if (bootGen.current === bootId && restored.users.length > 0) {
 					setProfiles(restored.users);
 				}
 			} catch (error) {
 				console.error(error);
 			}
+			if (bootGen.current !== bootId) {
+				return;
+			}
 			const list = await reconcileAccounts();
-			if (cancelled) {
+			if (bootGen.current !== bootId) {
 				return;
 			}
 			setProfiles(list);
 			const sessionId = readSession() ?? (await readAccountSession());
-			const existing = list.find((entry) => entry.id === sessionId) ?? null;
-			if (existing && !hasPin(existing)) {
-				await enterWorkspace(existing);
-				return;
+			const email = (rememberedDriveEmail() ?? '').trim().toLowerCase();
+			const existing =
+				list.find((entry) => entry.id === sessionId) ??
+				(email ? list.find((entry) => (entry.googleEmail ?? '').trim().toLowerCase() === email) : undefined) ??
+				null;
+			// Resume whenever this browser still has a session. PIN is only for Gate login after Sign out.
+			if (existing) {
+				try {
+					await enterWorkspace(existing);
+					return;
+				} catch (error) {
+					console.error(error);
+				}
 			}
-			setPhase('gate');
+			if (bootGen.current === bootId) {
+				setPhase('gate');
+			}
 		})().catch((error: unknown) => {
 			console.error(error);
-			if (!cancelled) {
+			if (bootGen.current === bootId) {
 				setPhase('gate');
 			}
 		});
-		return () => {
-			cancelled = true;
-		};
 	}, [enterWorkspace]);
 
 	const importMarkdown = useCallback(
@@ -1508,6 +1527,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}
 			if (hasPin(found) && !(await unlockProfile(found, pin))) {
 				throw new Error('That PIN does not match.');
+			}
+			if (hasPin(found)) {
+				rememberPinUnlock(found.id);
 			}
 			await enterWorkspace(found);
 		},

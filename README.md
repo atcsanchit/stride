@@ -42,7 +42,7 @@ Existing accounts that already have tickets skip the course page once (all three
 
 Tickets do **not** live in a Vercel database. The Hobby deploy is a static frontend. IndexedDB is first; Drive is the backup.
 
-After you edit, Stride writes IndexedDB immediately, then pushes **that Google account’s** files ~4 seconds after you stop, and again when you hide the tab (switch app, lock phone). Do not rely on closing the tab alone. After a refresh, Google does not open by itself — click Continue.
+After you edit, Stride writes IndexedDB immediately, then pushes **that Google account’s** files ~4 seconds after you stop, and again when you hide the tab (switch app, lock phone). Do not rely on closing the tab alone. A refresh keeps you signed in on this browser. Sign out (or Disconnect Google) clears the session on purpose. The Drive access token expires after about an hour — if sync fails, use Continue with Google once; the workspace itself stays open.
 
 Drive scope is `drive.file` (only files Stride created) plus email. Work-domain Google logins are rejected.
 
