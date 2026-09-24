@@ -6,11 +6,13 @@ export function StatusPills({
 	onChange,
 	locked = false,
 	omit = [],
+	allowWhenLocked = [],
 }: {
 	value: TicketStatus;
 	onChange: (status: TicketStatus) => void;
 	locked?: boolean;
 	omit?: TicketStatus[];
+	allowWhenLocked?: TicketStatus[];
 }) {
 	return (
 		<>
@@ -21,7 +23,7 @@ export function StatusPills({
 						key={entry.value}
 						className={`pill status-pill status-${entry.value}${value === entry.value ? ' is-on' : ''}`}
 						type="button"
-						disabled={locked && entry.value !== value}
+						disabled={locked && entry.value !== value && !allowWhenLocked.includes(entry.value)}
 						onClick={() => onChange(entry.value)}
 						title={entry.hint}
 					>
