@@ -175,14 +175,13 @@ interface StrideContextValue {
 				| 'scope'
 				| 'topicIds'
 				| 'tags'
-				| 'courseId'
 				| 'needsPr'
 				| 'pullRequests'
 				| 'estimatedEffort'
 				| 'priority'
 				| 'plannedDate'
 			>
-		>,
+		> & { courseId?: TrackId | null },
 	) => Promise<void>;
 	spillTicket: (id: string) => Promise<void>;
 	cloneTicket: (id: string) => Promise<Ticket | undefined>;
@@ -1130,33 +1129,34 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 					| 'scope'
 					| 'topicIds'
 					| 'tags'
-					| 'courseId'
 					| 'needsPr'
 					| 'pullRequests'
 					| 'estimatedEffort'
 					| 'priority'
 					| 'plannedDate'
 				>
-			>,
+			> & { courseId?: TrackId | null },
 		) => {
 			const ticket = ticketsRef.current.find((entry) => entry.id === id);
 			if (!ticket || ticketIsClosed(ticket.status)) {
 				return;
 			}
 			const chore = isChoreTicket(ticket);
-			const courseId = patch.courseId !== undefined ? patch.courseId : ticket.courseId;
+			const courseId =
+				patch.courseId === null ? undefined : patch.courseId !== undefined ? patch.courseId : ticket.courseId;
 			const pullRequests = keepPullRequests(patch.pullRequests ?? ticket.pullRequests);
 			const topicIds = chore
 				? []
-				: (patch.topicIds
-						? [...new Set(patch.topicIds)].filter((topicId) => itemsRef.current.some((entry) => entry.id === topicId))
-						: ticket.topicIds
-					).filter((topicId) => {
-						if (!courseId) {
-							return true;
-						}
-						return itemsRef.current.find((entry) => entry.id === topicId)?.trackId === courseId;
-					});
+				: !courseId
+					? []
+					: (patch.topicIds
+							? [...new Set(patch.topicIds)].filter((topicId) =>
+									itemsRef.current.some((entry) => entry.id === topicId),
+								)
+							: ticket.topicIds
+						).filter(
+							(topicId) => itemsRef.current.find((entry) => entry.id === topicId)?.trackId === courseId,
+						);
 			const next: Ticket = {
 				...ticket,
 				...patch,

@@ -479,10 +479,13 @@ function NewTicketForm({
 				ticket={{ id: '', courseId, needsPr, pullRequests }}
 				settings={settings}
 				onChange={(patch) => {
-					if (patch.courseId !== undefined && patch.courseId !== courseId) {
-						setCourseId(patch.courseId);
+					if ('courseId' in patch) {
+						const next = patch.courseId ?? undefined;
+						setCourseId(next);
 						setTopicIds((current) =>
-							current.filter((id) => items.find((item) => item.id === id)?.trackId === patch.courseId),
+							next
+								? current.filter((id) => items.find((item) => item.id === id)?.trackId === next)
+								: [],
 						);
 					}
 					if (patch.needsPr !== undefined) {

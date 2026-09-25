@@ -18,7 +18,11 @@ export function TicketCourseFields({
 	ticket: Pick<Ticket, 'id' | 'prKey' | 'courseId' | 'needsPr' | 'pullRequests'>;
 	settings: Settings;
 	disabled?: boolean;
-	onChange: (patch: { courseId?: TrackId; needsPr?: boolean; pullRequests?: TicketPullRequest[] }) => void;
+	onChange: (patch: {
+		courseId?: TrackId | null;
+		needsPr?: boolean;
+		pullRequests?: TicketPullRequest[];
+	}) => void;
 }) {
 	const [draft, setDraft] = useState('');
 	const [error, setError] = useState('');
@@ -90,7 +94,9 @@ export function TicketCourseFields({
 							className={ticket.courseId === track.id ? 'pill is-on' : 'pill'}
 							type="button"
 							disabled={disabled}
-							onClick={() => onChange({ courseId: track.id })}
+							onClick={() =>
+								onChange({ courseId: ticket.courseId === track.id ? null : track.id })
+							}
 						>
 							{track.short}
 						</button>
