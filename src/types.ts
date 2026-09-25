@@ -33,6 +33,7 @@ export type Priority = 0 | 1 | 2;
 export type Score = 1 | 2 | 3 | 4 | 5;
 export type TicketStatus = 'requirements' | 'ready' | 'progress' | 'blocked' | 'done' | 'cancelled';
 export type TicketKind = 'sprint' | 'chore';
+export type ChoreDomain = 'peakflo' | 'personal';
 
 export type TicketPullRequest = {
 	url: string;
@@ -152,8 +153,8 @@ export type Ticket = {
 	scope: string;
 	topicIds: string[];
 	tags: string[];
-	estimatedEffort: Score;
-	priority: Priority;
+	estimatedEffort?: Score | null;
+	priority?: Priority | null;
 	plannedDate: string;
 	status: TicketStatus;
 	statusReason?: string;
@@ -161,6 +162,8 @@ export type Ticket = {
 	needsPr?: boolean;
 	prKey?: string;
 	pullRequests?: TicketPullRequest[];
+	choreDomain?: ChoreDomain;
+	choreClient?: string;
 	createdAt: number;
 	originalTitle?: string;
 };
@@ -171,6 +174,7 @@ export type Settings = {
 	focusTrack: TrackId;
 	enabledTracks: TrackId[];
 	courseRepos?: Partial<Record<TrackId, string>>;
+	choreClients?: string[];
 };
 
 export type Profile = {

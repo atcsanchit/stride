@@ -69,6 +69,7 @@ import {
 } from '../lib/work-session';
 import type {
 	BackupFile,
+	ChoreDomain,
 	CoachNote,
 	Completion,
 	Drop,
@@ -135,6 +136,7 @@ interface StrideContextValue {
 	setTarget: (trackId: TrackId, target: number) => Promise<void>;
 	saveCourses: (tracks: TrackId[], focusTrack?: TrackId) => Promise<void>;
 	saveCourseRepo: (courseId: TrackId, slug: string) => Promise<boolean>;
+	saveChoreClient: (name: string) => Promise<void>;
 	startTask: (itemId: string, ticketId?: string) => Promise<void>;
 	pauseTimer: (ticketId?: string) => Promise<void>;
 	resumeTimer: (ticketId?: string) => Promise<void>;
@@ -160,28 +162,24 @@ interface StrideContextValue {
 		courseId?: TrackId;
 		needsPr?: boolean;
 		pullRequests?: TicketPullRequest[];
-		estimatedEffort: Score;
-		priority: Priority;
+		choreDomain?: ChoreDomain;
+		choreClient?: string;
+		estimatedEffort?: Score | null;
+		priority?: Priority | null;
 		plannedDate: string;
 		status?: TicketStatus;
 	}) => Promise<Ticket | undefined>;
 	updateTicket: (
 		id: string,
 		patch: Partial<
-			Pick<
-				Ticket,
-				| 'title'
-				| 'description'
-				| 'scope'
-				| 'topicIds'
-				| 'tags'
-				| 'needsPr'
-				| 'pullRequests'
-				| 'estimatedEffort'
-				| 'priority'
-				| 'plannedDate'
-			>
-		> & { courseId?: TrackId | null },
+			Pick<Ticket, 'title' | 'description' | 'scope' | 'topicIds' | 'tags' | 'needsPr' | 'pullRequests' | 'plannedDate'>
+		> & {
+			courseId?: TrackId | null;
+			choreDomain?: ChoreDomain | null;
+			choreClient?: string | null;
+			estimatedEffort?: Score | null;
+			priority?: Priority | null;
+		},
 	) => Promise<void>;
 	spillTicket: (id: string) => Promise<void>;
 	cloneTicket: (id: string) => Promise<Ticket | undefined>;
@@ -1056,8 +1054,10 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			courseId?: TrackId;
 			needsPr?: boolean;
 			pullRequests?: TicketPullRequest[];
-			estimatedEffort: Score;
-			priority: Priority;
+			choreDomain?: ChoreDomain;
+			choreClient?: string;
+			estimatedEffort?: Score | null;
+			priority?: Priority | null;
 			plannedDate: string;
 			status?: TicketStatus;
 		}) => {
@@ -1068,9 +1068,12 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}
 			const profileId = requireProfile().id;
 			const id = createId();
-			const courseId = input.courseId;
-			const needsPr = input.needsPr === true;
-			const pullRequests = keepPullRequests(input.pullRequests);
+			const courseId = kind === 'chore' ? undefined : input.courseId;
+			const needsPr = kind === 'chore' ? false : input.needsPr === true;
+			const pullRequests = kind === 'chore' ? [] : keepPullRequests(input.pullRequests);
+			const choreDomain = kind === 'chore' ? input.choreDomain : undefined;
+			const choreClient =
+				kind === 'chore' && choreDomain === 'peakflo' ? input.choreClient?.trim() || undefined : undefined;
 			const topicIds =
 				kind === 'chore'
 					? []
@@ -1099,15 +1102,19 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				needsPr,
 				prKey: ticketPrKey({ id }),
 				pullRequests,
-				estimatedEffort: input.estimatedEffort,
-				priority: input.priority,
+				choreDomain,
+				choreClient,
+				estimatedEffort: input.estimatedEffort === null ? null : input.estimatedEffort ?? null,
+				priority: input.priority === null ? null : input.priority ?? null,
 				plannedDate: input.plannedDate || todayKey(),
 				status,
 				createdAt: Date.now(),
 				userId: profileId,
 			};
 			await putTicket(profileId, ticket);
-			const next = [...ticketsRef.current, ticket].sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt);
+			const next = [...ticketsRef.current, ticket].sort(
+				(a, b) => (a.priority ?? 1) - (b.priority ?? 1) || a.createdAt - b.createdAt,
+			);
 			ticketsRef.current = next;
 			setTickets(next);
 			if (ticket.status === 'progress') {
@@ -1122,29 +1129,44 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		async (
 			id: string,
 			patch: Partial<
-				Pick<
-					Ticket,
-					| 'title'
-					| 'description'
-					| 'scope'
-					| 'topicIds'
-					| 'tags'
-					| 'needsPr'
-					| 'pullRequests'
-					| 'estimatedEffort'
-					| 'priority'
-					| 'plannedDate'
-				>
-			> & { courseId?: TrackId | null },
+				Pick<Ticket, 'title' | 'description' | 'scope' | 'topicIds' | 'tags' | 'needsPr' | 'pullRequests' | 'plannedDate'>
+			> & {
+				courseId?: TrackId | null;
+				choreDomain?: ChoreDomain | null;
+				choreClient?: string | null;
+				estimatedEffort?: Score | null;
+				priority?: Priority | null;
+			},
 		) => {
 			const ticket = ticketsRef.current.find((entry) => entry.id === id);
 			if (!ticket || ticketIsClosed(ticket.status)) {
 				return;
 			}
 			const chore = isChoreTicket(ticket);
-			const courseId =
-				patch.courseId === null ? undefined : patch.courseId !== undefined ? patch.courseId : ticket.courseId;
-			const pullRequests = keepPullRequests(patch.pullRequests ?? ticket.pullRequests);
+			const courseId = chore
+				? undefined
+				: patch.courseId === null
+					? undefined
+					: patch.courseId !== undefined
+						? patch.courseId
+						: ticket.courseId;
+			const pullRequests = chore ? [] : keepPullRequests(patch.pullRequests ?? ticket.pullRequests);
+			const choreDomain = !chore
+				? undefined
+				: patch.choreDomain === null
+					? undefined
+					: patch.choreDomain !== undefined
+						? patch.choreDomain
+						: ticket.choreDomain;
+			const choreClient = !chore
+				? undefined
+				: choreDomain !== 'peakflo'
+					? undefined
+					: patch.choreClient === null
+						? undefined
+						: patch.choreClient !== undefined
+							? patch.choreClient.trim() || undefined
+							: ticket.choreClient;
 			const topicIds = chore
 				? []
 				: !courseId
@@ -1166,9 +1188,23 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				scope: patch.scope !== undefined ? patch.scope.trim() : ticket.scope,
 				topicIds,
 				courseId,
-				needsPr: patch.needsPr !== undefined ? patch.needsPr === true : ticket.needsPr,
+				needsPr: chore ? false : patch.needsPr !== undefined ? patch.needsPr === true : ticket.needsPr,
 				prKey: ticket.prKey || ticketPrKey(ticket),
 				pullRequests,
+				choreDomain,
+				choreClient,
+				estimatedEffort:
+					patch.estimatedEffort === null
+						? null
+						: patch.estimatedEffort !== undefined
+							? patch.estimatedEffort
+							: ticket.estimatedEffort,
+				priority:
+					patch.priority === null
+						? null
+						: patch.priority !== undefined
+							? patch.priority
+							: ticket.priority,
 				tags: chore
 					? patch.tags
 						? [...new Set(patch.tags.map((tag) => tag.trim()).filter(Boolean))]
@@ -1331,6 +1367,8 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				needsPr: ticket.needsPr,
 				prKey: ticketPrKey({ id: cloneId }),
 				pullRequests: ticket.pullRequests ? [...ticket.pullRequests] : undefined,
+				choreDomain: ticket.choreDomain,
+				choreClient: ticket.choreClient,
 				estimatedEffort: ticket.estimatedEffort,
 				priority: ticket.priority,
 				plannedDate: ticket.plannedDate,
@@ -1347,7 +1385,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				clone.plannedDate = nextSprint.startDate;
 			}
 			await putTicket(profileId, clone);
-			const next = [...ticketsRef.current, clone].sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt);
+			const next = [...ticketsRef.current, clone].sort(
+				(a, b) => (a.priority ?? 1) - (b.priority ?? 1) || a.createdAt - b.createdAt,
+			);
 			ticketsRef.current = next;
 			setTickets(next);
 			pushToast('Cloned to next sprint', clone.title);
@@ -1486,6 +1526,24 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			setSettings(next);
 			await saveSettings(requireProfile().id, next);
 			return true;
+		},
+		[requireProfile],
+	);
+
+	const saveChoreClient = useCallback(
+		async (name: string) => {
+			const trimmed = name.trim();
+			if (!trimmed) {
+				return;
+			}
+			const existing = settingsRef.current.choreClients ?? [];
+			if (existing.some((entry) => entry.toLowerCase() === trimmed.toLowerCase())) {
+				return;
+			}
+			const choreClients = [...existing, trimmed].sort((a, b) => a.localeCompare(b));
+			const next = { ...settingsRef.current, choreClients };
+			setSettings(next);
+			await saveSettings(requireProfile().id, next);
 		},
 		[requireProfile],
 	);
@@ -1763,6 +1821,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		setTarget,
 		saveCourses,
 		saveCourseRepo,
+		saveChoreClient,
 		startTask,
 		pauseTimer,
 		resumeTimer,

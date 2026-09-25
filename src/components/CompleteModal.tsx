@@ -109,7 +109,15 @@ export function CompleteModal() {
 						</button>
 					))}
 				</div>
-				<EffortPills value={effort} onChange={setEffort} label="Effort" />
+				<EffortPills
+					value={effort}
+					onChange={(next) => {
+						if (next !== null) {
+							setEffort(next);
+						}
+					}}
+					label="Effort"
+				/>
 				<label className="field">
 					What I learned
 					<textarea

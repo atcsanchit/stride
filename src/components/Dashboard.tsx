@@ -36,7 +36,7 @@ export function Dashboard() {
 						ticket.status !== 'done' &&
 						ticket.status !== 'cancelled',
 				)
-				.sort((a, b) => a.priority - b.priority),
+				.sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1)),
 		[sprints, tickets],
 	);
 	const todayChores = useMemo(
@@ -49,7 +49,7 @@ export function Dashboard() {
 						ticket.status !== 'done' &&
 						ticket.status !== 'cancelled',
 				)
-				.sort((a, b) => a.priority - b.priority),
+				.sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1)),
 		[tickets],
 	);
 	const reviseDue = useMemo(() => dueQueue(reviews, items), [items, reviews]);

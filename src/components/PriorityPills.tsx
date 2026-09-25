@@ -5,8 +5,8 @@ export function PriorityPills({
 	value,
 	onChange,
 }: {
-	value: Priority;
-	onChange: (value: Priority) => void;
+	value: Priority | null | undefined;
+	onChange: (value: Priority | null) => void;
 }) {
 	return (
 		<>
@@ -17,7 +17,7 @@ export function PriorityPills({
 						key={entry.value}
 						className={`pill prio-pill prio-${entry.value}${value === entry.value ? ' is-on' : ''}`}
 						type="button"
-						onClick={() => onChange(entry.value)}
+						onClick={() => onChange(value === entry.value ? null : entry.value)}
 						title={entry.hint}
 					>
 						{entry.label}
