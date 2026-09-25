@@ -161,11 +161,20 @@ function openDb(profileId: string): Promise<IDBDatabase> {
 
 function normalizeSettings(value: Settings | undefined): Settings {
 	const fallback = emptySettings();
+	const choreClients = [
+		...new Set(
+			(value?.choreClients ?? [])
+				.map((name) => name.trim())
+				.filter(Boolean),
+		),
+	].sort((a, b) => a.localeCompare(b));
 	return {
 		activeTrack: value?.activeTrack ?? fallback.activeTrack,
 		dailyTargets: { ...fallback.dailyTargets, ...value?.dailyTargets },
 		focusTrack: value?.focusTrack ?? fallback.focusTrack,
 		enabledTracks: sanitizeEnabledTracks(value?.enabledTracks),
+		courseRepos: value?.courseRepos ? { ...value.courseRepos } : undefined,
+		choreClients: choreClients.length > 0 ? choreClients : undefined,
 	};
 }
 
@@ -231,7 +240,7 @@ async function readSnapshot(db: IDBDatabase): Promise<{
 		tickets: tickets
 			.filter((row) => row?.id)
 			.map((row) => normalizeTicket(row))
-			.sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt),
+			.sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1) || a.createdAt - b.createdAt),
 		reviews: reviews.filter((row) => row?.id).sort((a, b) => a.dueDate.localeCompare(b.dueDate)),
 		settings: normalizeSettings(settingsRecord?.value),
 	};

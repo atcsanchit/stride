@@ -22,7 +22,7 @@ export function normalizeSprint(raw: Sprint): Sprint {
 }
 
 export function ticketPoints(ticket: Ticket): number {
-	return ticket.estimatedEffort;
+	return ticket.estimatedEffort ?? 0;
 }
 
 export function sprintScore(tickets: Ticket[]) {

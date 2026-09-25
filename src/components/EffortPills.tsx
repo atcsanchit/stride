@@ -6,8 +6,8 @@ export function EffortPills({
 	onChange,
 	label = 'Estimated effort',
 }: {
-	value: Score;
-	onChange: (value: Score) => void;
+	value: Score | null | undefined;
+	onChange: (value: Score | null) => void;
 	label?: string;
 }) {
 	return (
@@ -19,7 +19,7 @@ export function EffortPills({
 						key={entry.value}
 						className={`pill effort-pill effort-${entry.value}${value === entry.value ? ' is-on' : ''}`}
 						type="button"
-						onClick={() => onChange(entry.value)}
+						onClick={() => onChange(value === entry.value ? null : entry.value)}
 					>
 						{entry.label}
 					</button>

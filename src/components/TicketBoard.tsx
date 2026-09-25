@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { addDays, clampDate, datesInclusive, prettyDate, todayKey, weekdayLabel, weekEnd, weekStart } from '../lib/time';
 import { dedupeChoreTicketsForView, sprintLabel, sprintScore } from '../lib/sprint';
 import { isChoreTicket, isSprintTicket, ticketTags, ticketTimerPaused } from '../lib/ticket';
-import type { Priority, Score, TicketKind, TicketPullRequest, TicketStatus, TrackId } from '../types';
+import type { ChoreDomain, Priority, Score, TicketKind, TicketPullRequest, TicketStatus, TrackId } from '../types';
 import { useStride } from '../store/StrideState';
+import { ChoreDomainFields } from './ChoreDomainFields';
 import { ChoreTagger } from './ChoreTagger';
 import { EffortPills } from './EffortPills';
 import { PriorityPills } from './PriorityPills';
@@ -81,7 +82,10 @@ export function TicketBoard({ kind }: { kind: TicketKind }) {
 	}, [sessions, tickets, timerPrompt]);
 
 	const sorted = [...scoped].sort(
-		(a, b) => a.priority - b.priority || a.plannedDate.localeCompare(b.plannedDate) || a.createdAt - b.createdAt,
+		(a, b) =>
+			(a.priority ?? 1) - (b.priority ?? 1) ||
+			a.plannedDate.localeCompare(b.plannedDate) ||
+			a.createdAt - b.createdAt,
 	);
 	const tagged =
 		chore && tagFilter !== 'all' ? sorted.filter((ticket) => ticketTags(ticket).includes(tagFilter)) : sorted;
@@ -409,7 +413,7 @@ function NewTicketForm({
 	defaultDay: string;
 	onCreated: (id: string) => void;
 }) {
-	const { items, settings, addTicket } = useStride();
+	const { items, settings, addTicket, saveChoreClient } = useStride();
 	const chore = kind === 'chore';
 	const [title, setTitle] = useState('');
 	const [description, setDescription] = useState('');
@@ -417,10 +421,12 @@ function NewTicketForm({
 	const [courseId, setCourseId] = useState<TrackId | undefined>();
 	const [needsPr, setNeedsPr] = useState(false);
 	const [pullRequests, setPullRequests] = useState<TicketPullRequest[]>([]);
+	const [choreDomain, setChoreDomain] = useState<ChoreDomain | undefined>();
+	const [choreClient, setChoreClient] = useState<string | undefined>();
 	const [topicIds, setTopicIds] = useState<string[]>([]);
 	const [tags, setTags] = useState<string[]>([]);
-	const [estimatedEffort, setEstimatedEffort] = useState<Score>(3);
-	const [priority, setPriority] = useState<Priority>(1);
+	const [estimatedEffort, setEstimatedEffort] = useState<Score | null>(3);
+	const [priority, setPriority] = useState<Priority | null>(1);
 	const [status, setStatus] = useState<TicketStatus>('requirements');
 	const [plannedDate, setPlannedDate] = useState(defaultDay);
 
@@ -435,9 +441,11 @@ function NewTicketForm({
 					scope,
 					topicIds: chore ? [] : topicIds,
 					tags: chore ? tags : [],
-					courseId,
-					needsPr,
-					pullRequests,
+					courseId: chore ? undefined : courseId,
+					needsPr: chore ? false : needsPr,
+					pullRequests: chore ? [] : pullRequests,
+					choreDomain: chore ? choreDomain : undefined,
+					choreClient: chore ? choreClient : undefined,
 					estimatedEffort,
 					priority,
 					plannedDate,
@@ -475,27 +483,43 @@ function NewTicketForm({
 					placeholder="In scope / out of scope"
 				/>
 			</label>
-			<TicketCourseFields
-				ticket={{ id: '', courseId, needsPr, pullRequests }}
-				settings={settings}
-				onChange={(patch) => {
-					if ('courseId' in patch) {
-						const next = patch.courseId ?? undefined;
-						setCourseId(next);
-						setTopicIds((current) =>
-							next
-								? current.filter((id) => items.find((item) => item.id === id)?.trackId === next)
-								: [],
-						);
-					}
-					if (patch.needsPr !== undefined) {
-						setNeedsPr(patch.needsPr);
-					}
-					if (patch.pullRequests) {
-						setPullRequests(patch.pullRequests);
-					}
-				}}
-			/>
+			{chore ? (
+				<ChoreDomainFields
+					ticket={{ choreDomain, choreClient }}
+					settings={settings}
+					onChange={(patch) => {
+						if ('choreDomain' in patch) {
+							setChoreDomain(patch.choreDomain ?? undefined);
+						}
+						if ('choreClient' in patch) {
+							setChoreClient(patch.choreClient ?? undefined);
+						}
+					}}
+					onAddClient={saveChoreClient}
+				/>
+			) : (
+				<TicketCourseFields
+					ticket={{ id: '', courseId, needsPr, pullRequests }}
+					settings={settings}
+					onChange={(patch) => {
+						if ('courseId' in patch) {
+							const next = patch.courseId ?? undefined;
+							setCourseId(next);
+							setTopicIds((current) =>
+								next
+									? current.filter((id) => items.find((item) => item.id === id)?.trackId === next)
+									: [],
+							);
+						}
+						if (patch.needsPr !== undefined) {
+							setNeedsPr(patch.needsPr);
+						}
+						if (patch.pullRequests) {
+							setPullRequests(patch.pullRequests);
+						}
+					}}
+				/>
+			)}
 			{chore ? (
 				<ChoreTagger selected={tags} onChange={setTags} />
 			) : courseId ? (

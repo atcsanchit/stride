@@ -6,6 +6,7 @@ import { isChoreTicket, ticketCompletions, ticketIsClosed, ticketTags, ticketTop
 import { isSessionPaused, isSessionRunning, openSessionForTicket } from '../lib/work-session';
 import type { Completion, Ticket, TicketStatus } from '../types';
 import { useStride } from '../store/StrideState';
+import { ChoreDomainFields } from './ChoreDomainFields';
 import { ChoreTagger } from './ChoreTagger';
 import { StatusPills } from './StatusPills';
 import { EffortPills } from './EffortPills';
@@ -73,6 +74,7 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 		cloneTicket,
 		completions,
 		settings,
+		saveChoreClient,
 	} = useStride();
 	const [title, setTitle] = useState(ticket.title);
 	const [description, setDescription] = useState(ticket.description);
@@ -142,6 +144,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 								{trackMeta(id).short}
 							</span>
 						))}
+				{chore && ticket.choreDomain ? (
+					<span className="tag-chip">{ticket.choreDomain === 'peakflo' ? 'Peakflo' : 'Personal'}</span>
+				) : null}
+				{chore && ticket.choreDomain === 'peakflo' && ticket.choreClient ? (
+					<span className="tag-chip">{ticket.choreClient}</span>
+				) : null}
 				{running ? <span className="muted">timer on</span> : null}
 				{paused ? <span className="muted">timer paused</span> : null}
 			</div>
@@ -276,27 +284,37 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 							placeholder="In / out of scope"
 						/>
 					</label>
-					<TicketCourseFields
-						ticket={ticket}
-						settings={settings}
-						disabled={closed}
-						onChange={(patch) => {
-							if ('courseId' in patch) {
-								if (patch.courseId === null) {
-									void updateTicket(ticket.id, { ...patch, courseId: null, topicIds: [] });
-									return;
+					{chore ? (
+						<ChoreDomainFields
+							ticket={ticket}
+							settings={settings}
+							disabled={closed}
+							onChange={(patch) => void updateTicket(ticket.id, patch)}
+							onAddClient={saveChoreClient}
+						/>
+					) : (
+						<TicketCourseFields
+							ticket={ticket}
+							settings={settings}
+							disabled={closed}
+							onChange={(patch) => {
+								if ('courseId' in patch) {
+									if (patch.courseId === null) {
+										void updateTicket(ticket.id, { ...patch, courseId: null, topicIds: [] });
+										return;
+									}
+									if (patch.courseId && patch.courseId !== ticket.courseId) {
+										const topicIds = ticket.topicIds.filter(
+											(id) => items.find((item) => item.id === id)?.trackId === patch.courseId,
+										);
+										void updateTicket(ticket.id, { ...patch, topicIds });
+										return;
+									}
 								}
-								if (patch.courseId && patch.courseId !== ticket.courseId) {
-									const topicIds = ticket.topicIds.filter(
-										(id) => items.find((item) => item.id === id)?.trackId === patch.courseId,
-									);
-									void updateTicket(ticket.id, { ...patch, topicIds });
-									return;
-								}
-							}
-							void updateTicket(ticket.id, patch);
-						}}
-					/>
+								void updateTicket(ticket.id, patch);
+							}}
+						/>
+					)}
 					{chore ? (
 						<ChoreTagger selected={tags} onChange={(next) => void updateTicket(ticket.id, { tags: next })} />
 					) : ticket.courseId ? (

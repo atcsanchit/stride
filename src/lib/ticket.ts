@@ -1,5 +1,6 @@
 import { BOARD_STATUS_ORDER, CHORE_TAGS, STATUSES } from '../constants';
 import type {
+	ChoreDomain,
 	Completion,
 	Priority,
 	RoadmapItem,
@@ -35,9 +36,44 @@ export function normalizeTags(values: string[] | undefined): string[] {
 	return [...new Set((values ?? []).map((tag) => tag.trim()).filter(Boolean))];
 }
 
-export function choreTagPalette(tickets: Ticket[]): string[] {
-	const used = tickets.flatMap((ticket) => (isChoreTicket(ticket) ? ticketTags(ticket) : []));
-	return [...new Set([...CHORE_TAGS, ...used])];
+export function choreClientPalette(tickets: Ticket[], saved: string[] | undefined): string[] {
+	const used = tickets
+		.filter(isChoreTicket)
+		.map((ticket) => ticket.choreClient?.trim())
+		.filter((name): name is string => Boolean(name));
+	return [...new Set([...(saved ?? []), ...used])].sort((a, b) => a.localeCompare(b));
+}
+
+function normalizeChoreDomain(value: unknown): ChoreDomain | undefined {
+	return value === 'peakflo' || value === 'personal' ? value : undefined;
+}
+
+function normalizeOptionalScore(value: unknown, legacyDefault: Score): Score | null {
+	if (value === null) {
+		return null;
+	}
+	if (value === undefined) {
+		return legacyDefault;
+	}
+	const n = Number(value);
+	if (n === 1 || n === 2 || n === 3 || n === 4 || n === 5) {
+		return n;
+	}
+	return legacyDefault;
+}
+
+function normalizeOptionalPriority(value: unknown, legacyDefault: Priority): Priority | null {
+	if (value === null) {
+		return null;
+	}
+	if (value === undefined) {
+		return legacyDefault;
+	}
+	const n = Number(value);
+	if (n === 0 || n === 1 || n === 2) {
+		return n;
+	}
+	return legacyDefault;
 }
 
 export function normalizeTicketStatus(value: string | undefined): TicketStatus {
@@ -141,15 +177,20 @@ export function normalizeTicket(raw: RawTicket): Ticket {
 		scope: raw.scope ?? '',
 		topicIds,
 		tags: kind === 'chore' ? normalizeTags(raw.tags) : [],
-		estimatedEffort: (raw.estimatedEffort as Score | undefined) ?? 3,
-		priority: normalizePriority(raw.priority),
+		estimatedEffort: normalizeOptionalScore(raw.estimatedEffort, 3),
+		priority: normalizeOptionalPriority(raw.priority, 1),
 		plannedDate: raw.plannedDate,
 		status: normalizeTicketStatus(raw.status),
 		statusReason: typeof raw.statusReason === 'string' ? raw.statusReason : undefined,
-		courseId: raw.courseId,
-		needsPr: raw.needsPr === true,
+		courseId: kind === 'chore' ? undefined : raw.courseId,
+		needsPr: kind === 'chore' ? false : raw.needsPr === true,
 		prKey: typeof raw.prKey === 'string' ? raw.prKey : undefined,
-		pullRequests: normalizePullRequests(raw.pullRequests),
+		pullRequests: kind === 'chore' ? [] : normalizePullRequests(raw.pullRequests),
+		choreDomain: kind === 'chore' ? normalizeChoreDomain((raw as { choreDomain?: unknown }).choreDomain) : undefined,
+		choreClient:
+			kind === 'chore' && typeof (raw as { choreClient?: unknown }).choreClient === 'string'
+				? (raw as { choreClient: string }).choreClient.trim() || undefined
+				: undefined,
 		createdAt: raw.createdAt,
 		userId: typeof (raw as { userId?: unknown }).userId === 'string' ? (raw as { userId: string }).userId : undefined,
 		originalTitle:
