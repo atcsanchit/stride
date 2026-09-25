@@ -281,12 +281,18 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 						settings={settings}
 						disabled={closed}
 						onChange={(patch) => {
-							if (patch.courseId && patch.courseId !== ticket.courseId) {
-								const topicIds = ticket.topicIds.filter(
-									(id) => items.find((item) => item.id === id)?.trackId === patch.courseId,
-								);
-								void updateTicket(ticket.id, { ...patch, topicIds });
-								return;
+							if ('courseId' in patch) {
+								if (patch.courseId === null) {
+									void updateTicket(ticket.id, { ...patch, courseId: null, topicIds: [] });
+									return;
+								}
+								if (patch.courseId && patch.courseId !== ticket.courseId) {
+									const topicIds = ticket.topicIds.filter(
+										(id) => items.find((item) => item.id === id)?.trackId === patch.courseId,
+									);
+									void updateTicket(ticket.id, { ...patch, topicIds });
+									return;
+								}
 							}
 							void updateTicket(ticket.id, patch);
 						}}
