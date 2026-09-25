@@ -1370,13 +1370,16 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const removeTicket = useCallback(
 		async (id: string) => {
 			const ticket = ticketsRef.current.find((entry) => entry.id === id);
-			if (!ticket || ticket.status === 'done') {
+			if (!ticket) {
 				return;
 			}
 			await deleteTicket(requireProfile().id, id);
-			setTickets((list) => list.filter((entry) => entry.id !== id));
+			const next = ticketsRef.current.filter((entry) => entry.id !== id);
+			ticketsRef.current = next;
+			setTickets(next);
+			pushToast('Moved to trash', ticket.title);
 		},
-		[requireProfile],
+		[pushToast, requireProfile],
 	);
 
 	const importFiles = useCallback(

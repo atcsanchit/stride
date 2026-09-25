@@ -404,9 +404,18 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 						Clone to next sprint
 					</button>
 				)}
-				{compact || done ? null : (
-					<button className="ticket-remove" type="button" onClick={() => void removeTicket(ticket.id)}>
-						Remove
+				{compact ? null : (
+					<button
+						className="ticket-remove"
+						type="button"
+						onClick={() => {
+							if (!window.confirm(`Move "${ticket.title}" to trash? This removes it from the board.`)) {
+								return;
+							}
+							void removeTicket(ticket.id);
+						}}
+					>
+						Move to trash
 					</button>
 				)}
 			</div>
