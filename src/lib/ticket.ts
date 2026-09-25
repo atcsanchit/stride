@@ -36,6 +36,11 @@ export function normalizeTags(values: string[] | undefined): string[] {
 	return [...new Set((values ?? []).map((tag) => tag.trim()).filter(Boolean))];
 }
 
+export function choreTagPalette(tickets: Ticket[]): string[] {
+	const used = tickets.flatMap((ticket) => (isChoreTicket(ticket) ? ticketTags(ticket) : []));
+	return [...new Set([...CHORE_TAGS, ...used])];
+}
+
 export function choreClientPalette(tickets: Ticket[], saved: string[] | undefined): string[] {
 	const used = tickets
 		.filter(isChoreTicket)
