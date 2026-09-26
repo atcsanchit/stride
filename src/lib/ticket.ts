@@ -88,7 +88,13 @@ export function normalizeTicketStatus(value: string | undefined): TicketStatus {
 	if (value === 'planned' || value === 'ready') {
 		return 'ready';
 	}
-	if (value === 'requirements' || value === 'blocked' || value === 'done' || value === 'cancelled') {
+	if (
+		value === 'requirements' ||
+		value === 'review' ||
+		value === 'blocked' ||
+		value === 'done' ||
+		value === 'cancelled'
+	) {
 		return value;
 	}
 	return 'ready';

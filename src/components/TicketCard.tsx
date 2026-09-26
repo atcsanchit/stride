@@ -202,7 +202,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 					) : (
 						<p className="muted">No course topics tagged.</p>
 					)}
-					<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+					<StatusPills
+						value={ticket.status}
+						onChange={changeStatus}
+						locked={done}
+						omit={chore ? [] : ['review']}
+					/>
 					<PracticalChallengeCard challenges={practicals} compact />
 					{done && latestCloseout ? <CloseoutCard record={latestCloseout} /> : null}
 				</>
@@ -246,7 +251,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 						</LockedBlock>
 					</div>
 					<PracticalChallengeCard challenges={practicals} />
-					<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+					<StatusPills
+						value={ticket.status}
+						onChange={changeStatus}
+						locked={done}
+						omit={chore ? [] : ['review']}
+					/>
 					{done ? (
 						closeouts.length > 0 ? (
 							closeouts.map((record) => <CloseoutCard key={record.id} record={record} />)
@@ -358,7 +368,12 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 								</select>
 							)}
 						</label>
-						<StatusPills value={ticket.status} onChange={changeStatus} locked={done} />
+						<StatusPills
+							value={ticket.status}
+							onChange={changeStatus}
+							locked={done}
+							omit={chore ? [] : ['review']}
+						/>
 					</div>
 				</>
 			)}

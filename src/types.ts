@@ -31,7 +31,7 @@ export type ReviewCard = {
 
 export type Priority = 0 | 1 | 2;
 export type Score = 1 | 2 | 3 | 4 | 5;
-export type TicketStatus = 'requirements' | 'ready' | 'progress' | 'blocked' | 'done' | 'cancelled';
+export type TicketStatus = 'requirements' | 'ready' | 'progress' | 'review' | 'blocked' | 'done' | 'cancelled';
 export type TicketKind = 'sprint' | 'chore';
 export type ChoreDomain = 'peakflo' | 'personal';
 

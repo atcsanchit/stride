@@ -108,6 +108,7 @@ export const STATUSES: Array<{ value: TicketStatus; label: string; hint: string 
 	{ value: 'requirements', label: 'Requirements', hint: 'Still defining the work' },
 	{ value: 'ready', label: 'Ready to pick', hint: 'Queued, not started' },
 	{ value: 'progress', label: 'In progress', hint: 'Timer should be running' },
+	{ value: 'review', label: 'In review', hint: 'Waiting on review or sign-off' },
 	{ value: 'blocked', label: 'Blocked', hint: 'Waiting on something' },
 	{ value: 'done', label: 'Completed', hint: 'Shipped' },
 	{ value: 'cancelled', label: 'Triage / cancel', hint: 'Not doing this' },
@@ -115,6 +116,7 @@ export const STATUSES: Array<{ value: TicketStatus; label: string; hint: string 
 
 export const BOARD_STATUS_ORDER: TicketStatus[] = [
 	'progress',
+	'review',
 	'blocked',
 	'ready',
 	'requirements',

@@ -530,7 +530,7 @@ function NewTicketForm({
 			<div className="ticket-meta-grid">
 				<EffortPills value={estimatedEffort} onChange={setEstimatedEffort} />
 				<PriorityPills value={priority} onChange={setPriority} />
-				<StatusPills value={status} onChange={setStatus} omit={['done']} />
+				<StatusPills value={status} onChange={setStatus} omit={chore ? ['done'] : ['done', 'review']} />
 				<label className="field" style={{ marginBottom: 0 }}>
 					Day
 					{chore ? (
