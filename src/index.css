@@ -1956,6 +1956,11 @@ button.cell {
 	color: var(--ai);
 }
 
+.status-review,
+.status-pill.status-review {
+	color: var(--design);
+}
+
 .status-blocked,
 .status-pill.status-blocked {
 	color: var(--rose);
