@@ -47,6 +47,7 @@ import {
 	installDrivePersistHooks,
 	pullProfileFromDrive,
 	restoreFromDrive,
+	subscribeDriveData,
 	subscribeDriveStatus,
 	syncDriveNow as pushDriveNow,
 	flushDriveSync,
@@ -250,13 +251,6 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const [dragging, setDragging] = useState(false);
 	const [drive, setDrive] = useState<DriveStatus>(getDriveStatus);
 
-	useEffect(() => {
-		installDrivePersistHooks();
-		return subscribeDriveStatus(setDrive);
-	}, []);
-
-	useEffect(() => attachDriveLeaveSync(), []);
-
 	const profileRef = useRef(profile);
 	profileRef.current = profile;
 	const itemsRef = useRef(items);
@@ -275,6 +269,42 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	sessionsRef.current = sessions;
 	const sprintsRef = useRef(sprints);
 	const bootGen = useRef(0);
+
+	useEffect(() => {
+		installDrivePersistHooks();
+		return subscribeDriveStatus(setDrive);
+	}, []);
+
+	useEffect(
+		() =>
+			attachDriveLeaveSync(() => profileRef.current?.id ?? null),
+		[],
+	);
+
+	useEffect(() => {
+		return subscribeDriveData((profileId) => {
+			if (profileRef.current?.id !== profileId) {
+				return;
+			}
+			void (async () => {
+				try {
+					const loaded = await loadAll(profileId);
+					ticketsRef.current = loaded.tickets;
+					setTickets(loaded.tickets);
+					setSprints(loaded.sprints);
+					setSessions(loaded.sessions);
+					setCompletions(loaded.completions);
+					setReviews(loaded.reviews ?? []);
+					setDrops(loaded.drops);
+					setItems(loaded.items.sort((a, b) => a.order - b.order));
+					setRoadmaps(loaded.roadmaps.sort((a, b) => a.addedAt - b.addedAt));
+					setSettings(loaded.settings);
+				} catch (error) {
+					console.error(error);
+				}
+			})();
+		});
+	}, []);
 	sprintsRef.current = sprints;
 
 	const pushToast = useCallback((title: string, body: string) => {
@@ -1758,7 +1788,17 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 
 	const runDriveSync = useCallback(async () => {
 		await pushDriveNow();
-		pushToast('Drive synced', 'accounts.json and profile JSON are in the Stride folder.');
+		const id = profileRef.current?.id;
+		if (id) {
+			const loaded = await loadAll(id);
+			ticketsRef.current = loaded.tickets;
+			setTickets(loaded.tickets);
+			setSprints(loaded.sprints);
+			setSessions(loaded.sessions);
+			setCompletions(loaded.completions);
+			setReviews(loaded.reviews ?? []);
+		}
+		pushToast('Drive synced', 'Local and Drive were merged. Tickets from every browser should be here.');
 	}, [pushToast]);
 
 	const disconnectDrive = useCallback(() => {

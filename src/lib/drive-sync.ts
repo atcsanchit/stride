@@ -54,8 +54,10 @@ type DriveSnapshotFile = {
 };
 
 type Listener = (status: DriveStatus) => void;
+type DataListener = (profileId: string) => void;
 
 const listeners = new Set<Listener>();
+const dataListeners = new Set<DataListener>();
 const dirtyProfiles = new Set<string>();
 let accountsDirty = false;
 let accountsTimer: number | null = null;
@@ -103,6 +105,16 @@ export function subscribeDriveStatus(listener: Listener): () => void {
 	listeners.add(listener);
 	listener(getDriveStatus());
 	return () => listeners.delete(listener);
+}
+
+/** Fired when Drive merge wrote progress into local IndexedDB. */
+export function subscribeDriveData(listener: DataListener): () => void {
+	dataListeners.add(listener);
+	return () => dataListeners.delete(listener);
+}
+
+function emitData(profileId: string): void {
+	dataListeners.forEach((listener) => listener(profileId));
 }
 
 function emit(): void {
@@ -266,20 +278,24 @@ export async function restoreFromDrive(interactive: boolean, googleEmail?: strin
 	}
 }
 
-async function applyRemoteSnapshot(profileId: string, remote: DriveSnapshotFile): Promise<void> {
-	const local = await loadLocalSnapshot(profileId);
-	const lastPush = readLastPushed(profileId) ?? 0;
-	const preferRemote = remote.updatedAt > lastPush;
-	const merged = preferRemote ? mergeSnapshots(remote.snapshot, local) : mergeSnapshots(local, remote.snapshot);
+async function applyMergedSnapshot(profileId: string, merged: ProgressSnapshot, remoteUpdatedAt?: number): Promise<void> {
 	applyingRemote = true;
 	try {
 		await replaceAll(profileId, merged);
 	} finally {
 		applyingRemote = false;
 	}
-	if (preferRemote) {
-		writeLastPushed(profileId, remote.updatedAt);
+	if (remoteUpdatedAt && remoteUpdatedAt > (readLastPushed(profileId) ?? 0)) {
+		writeLastPushed(profileId, remoteUpdatedAt);
 	}
+	emitData(profileId);
+}
+
+async function applyRemoteSnapshot(profileId: string, remote: DriveSnapshotFile): Promise<void> {
+	const local = await loadLocalSnapshot(profileId);
+	/** Always union both sides — never drop tickets that exist only on one browser. */
+	const merged = mergeSnapshots(remote.snapshot, local);
+	await applyMergedSnapshot(profileId, merged, remote.updatedAt);
 }
 
 export async function pullProfileFromDrive(profileId: string, interactive = false): Promise<void> {
@@ -327,8 +343,38 @@ async function pushAccounts(interactive: boolean): Promise<void> {
 	accountsDirty = false;
 }
 
+/**
+ * Pull Drive → merge with local (union tickets) → write local + Drive.
+ * Prevents one browser from wiping tickets created in another.
+ */
 async function pushProfile(profileId: string, interactive: boolean): Promise<void> {
-	const snapshot = await loadAll(profileId);
+	const mergeWithRemote = async (base: ProgressSnapshot): Promise<{ merged: ProgressSnapshot; remoteUpdatedAt?: number }> => {
+		const remote = await readDriveJson<DriveSnapshotFile>(snapshotFileName(profileId), interactive);
+		if (remote?.kind === 'stride-drive-snapshot' && remote.snapshot) {
+			return { merged: mergeSnapshots(base, remote.snapshot), remoteUpdatedAt: remote.updatedAt };
+		}
+		return { merged: base };
+	};
+
+	let local = await loadAll(profileId);
+	let remoteUpdatedAt: number | undefined;
+	try {
+		const first = await mergeWithRemote(local);
+		local = first.merged;
+		remoteUpdatedAt = first.remoteUpdatedAt;
+	} catch (error) {
+		if (interactive) {
+			throw error;
+		}
+		console.error('Drive pull before push failed; uploading local snapshot', error);
+	}
+
+	const beforeIds = new Set((await loadLocalSnapshot(profileId)).tickets.map((ticket) => ticket.id));
+	const gainedRemote = local.tickets.some((ticket) => !beforeIds.has(ticket.id));
+	if (gainedRemote || local.tickets.length !== beforeIds.size) {
+		await applyMergedSnapshot(profileId, local, remoteUpdatedAt);
+	}
+
 	const identity = await loadIdentity(profileId);
 	const updatedAt = Date.now();
 	const payload: DriveSnapshotFile = {
@@ -337,10 +383,31 @@ async function pushProfile(profileId: string, interactive: boolean): Promise<voi
 		updatedAt,
 		profileId,
 		identity,
-		snapshot,
+		snapshot: local,
 	};
 	await writeDriveJson(snapshotFileName(profileId), payload, interactive);
 	writeLastPushed(profileId, updatedAt);
+
+	// If another tab wrote between our pull and write, pull again and re-merge once.
+	try {
+		const again = await mergeWithRemote(local);
+		const againIds = new Set(again.merged.tickets.map((ticket) => ticket.id));
+		const missing = local.tickets.some((ticket) => !againIds.has(ticket.id)) || again.merged.tickets.some((ticket) => !local.tickets.some((row) => row.id === ticket.id));
+		if (missing && again.remoteUpdatedAt && again.remoteUpdatedAt > updatedAt) {
+			local = again.merged;
+			await applyMergedSnapshot(profileId, local, again.remoteUpdatedAt);
+			const retryAt = Date.now();
+			await writeDriveJson(
+				snapshotFileName(profileId),
+				{ ...payload, updatedAt: retryAt, snapshot: local },
+				interactive,
+			);
+			writeLastPushed(profileId, retryAt);
+		}
+	} catch (error) {
+		console.error('Drive verify-after-push failed', error);
+	}
+
 	dirtyProfiles.delete(profileId);
 }
 
@@ -428,16 +495,45 @@ export async function syncDriveNow(): Promise<void> {
 	await flushDriveSync(true);
 }
 
-export function attachDriveLeaveSync(): () => void {
-	const onHidden = () => {
-		if (document.visibilityState === 'hidden') {
-			void flushDriveSync(false);
-		}
+export function attachDriveLeaveSync(getActiveProfileId?: () => string | null): () => void {
+	const flushLeaving = () => {
+		void (async () => {
+			try {
+				const users = await profilesForCurrentDrive();
+				for (const user of users) {
+					dirtyProfiles.add(user.id);
+				}
+				const active = getActiveProfileId?.();
+				if (active) {
+					dirtyProfiles.add(active);
+				}
+				accountsDirty = users.length > 0 || Boolean(active);
+				await flushDriveSync(false);
+			} catch (error) {
+				console.error(error);
+			}
+		})();
 	};
-	document.addEventListener('visibilitychange', onHidden);
-	window.addEventListener('pagehide', onHidden);
+
+	const onVisibility = () => {
+		if (document.visibilityState === 'hidden') {
+			flushLeaving();
+			return;
+		}
+		if (document.visibilityState !== 'visible') {
+			return;
+		}
+		const active = getActiveProfileId?.();
+		if (!active || !driveRemembered()) {
+			return;
+		}
+		void pullProfileFromDrive(active, false).catch((error) => console.error(error));
+	};
+
+	document.addEventListener('visibilitychange', onVisibility);
+	window.addEventListener('pagehide', flushLeaving);
 	return () => {
-		document.removeEventListener('visibilitychange', onHidden);
-		window.removeEventListener('pagehide', onHidden);
+		document.removeEventListener('visibilitychange', onVisibility);
+		window.removeEventListener('pagehide', flushLeaving);
 	};
 }

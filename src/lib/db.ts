@@ -291,6 +291,26 @@ function unionById<T extends { id: string }>(preferred: T[], extra: T[]): T[] {
 	return [...map.values()];
 }
 
+function ticketFreshness(ticket: Ticket): number {
+	return ticket.updatedAt ?? ticket.createdAt ?? 0;
+}
+
+/** Keep every ticket id from both sides; on conflict keep the fresher edit. */
+export function mergeTickets(left: Ticket[], right: Ticket[]): Ticket[] {
+	const map = new Map<string, Ticket>();
+	for (const row of [...left, ...right]) {
+		if (!row?.id) {
+			continue;
+		}
+		const next = normalizeTicket(row);
+		const previous = map.get(next.id);
+		if (!previous || ticketFreshness(next) >= ticketFreshness(previous)) {
+			map.set(next.id, next);
+		}
+	}
+	return [...map.values()].sort((a, b) => (a.priority ?? 1) - (b.priority ?? 1) || a.createdAt - b.createdAt);
+}
+
 function mergeCourseItems(preferred: RoadmapItem[], extra: RoadmapItem[]): RoadmapItem[] {
 	const map = new Map<string, RoadmapItem>();
 	for (const row of extra) {
@@ -324,10 +344,7 @@ export function mergeSnapshots(disk: DiskSnapshot, local: ProgressSnapshot): Pro
 		completions: unionById(disk.completions, local.completions),
 		sessions: mergeSessions(disk.sessions, local.sessions),
 		sprints: unionById(disk.sprints.map((row) => normalizeSprint(row)), local.sprints),
-		tickets: unionById(
-			disk.tickets.map((row) => normalizeTicket(row)),
-			local.tickets,
-		),
+		tickets: mergeTickets(disk.tickets, local.tickets),
 		reviews: unionById(disk.reviews, local.reviews),
 		settings: preferDiskSettings ? { ...local.settings, ...disk.settings } : local.settings,
 	};
@@ -529,7 +546,12 @@ export async function putSprint(profileId: string, row: Sprint): Promise<void> {
 }
 
 export async function putTicket(profileId: string, row: Ticket): Promise<void> {
-	await putIn(profileId, 'tickets', { ...row, userId: profileId });
+	const now = Date.now();
+	await putIn(profileId, 'tickets', {
+		...row,
+		userId: profileId,
+		updatedAt: Math.max(row.updatedAt ?? 0, now),
+	});
 }
 
 export async function deleteTicket(profileId: string, id: string): Promise<void> {

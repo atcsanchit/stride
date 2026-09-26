@@ -165,6 +165,7 @@ export type Ticket = {
 	choreDomain?: ChoreDomain;
 	choreClient?: string;
 	createdAt: number;
+	updatedAt?: number;
 	originalTitle?: string;
 };
 
