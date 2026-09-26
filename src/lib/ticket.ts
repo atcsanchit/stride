@@ -203,6 +203,10 @@ export function normalizeTicket(raw: RawTicket): Ticket {
 				? (raw as { choreClient: string }).choreClient.trim() || undefined
 				: undefined,
 		createdAt: raw.createdAt,
+		updatedAt:
+			typeof (raw as { updatedAt?: unknown }).updatedAt === 'number'
+				? (raw as { updatedAt: number }).updatedAt
+				: raw.createdAt,
 		userId: typeof (raw as { userId?: unknown }).userId === 'string' ? (raw as { userId: string }).userId : undefined,
 		originalTitle:
 			typeof (raw as { originalTitle?: unknown }).originalTitle === 'string'
