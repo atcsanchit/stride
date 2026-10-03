@@ -1787,18 +1787,26 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	}, [enterWorkspace, pushToast]);
 
 	const runDriveSync = useCallback(async () => {
-		await pushDriveNow();
-		const id = profileRef.current?.id;
+		const id = profileRef.current?.id ?? null;
+		const recovery = await pushDriveNow(id);
 		if (id) {
 			const loaded = await loadAll(id);
 			ticketsRef.current = loaded.tickets;
+			setRoadmaps(loaded.roadmaps);
+			setItems(loaded.items);
+			setDrops(loaded.drops);
 			setTickets(loaded.tickets);
 			setSprints(loaded.sprints);
 			setSessions(loaded.sessions);
 			setCompletions(loaded.completions);
 			setReviews(loaded.reviews ?? []);
 		}
-		pushToast('Drive synced', 'Local and Drive were merged. Tickets from every browser should be here.');
+		pushToast(
+			'Drive synced',
+			recovery.ticketsRecovered > 0
+				? `Recovered ${recovery.ticketsRecovered} ticket(s) from ${recovery.profilesMerged} other profile(s) on this Google account.`
+				: 'Local and Drive were merged. Tickets from every browser should be here.',
+		);
 	}, [pushToast]);
 
 	const disconnectDrive = useCallback(() => {

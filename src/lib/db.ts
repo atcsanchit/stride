@@ -335,16 +335,61 @@ function snapshotHasProgress(snapshot: { tickets: Ticket[]; completions: Complet
 	return snapshot.tickets.length > 0 || snapshot.completions.length > 0 || snapshot.items.some((item) => item.done);
 }
 
+/**
+ * Each browser can create its own "Week of …" sprint for the same week. Keep one per start date
+ * (named first, then oldest — so every device picks the same id) and repoint tickets to it.
+ */
+function dedupeSprints(sprints: Sprint[], tickets: Ticket[]): { sprints: Sprint[]; tickets: Ticket[] } {
+	const keep = new Map<string, Sprint>();
+	for (const sprint of sprints) {
+		const current = keep.get(sprint.startDate);
+		if (!current) {
+			keep.set(sprint.startDate, sprint);
+			continue;
+		}
+		const named = Boolean(sprint.name?.trim());
+		const currentNamed = Boolean(current.name?.trim());
+		if (
+			(named && !currentNamed) ||
+			(named === currentNamed && (sprint.createdAt || 0) < (current.createdAt || 0))
+		) {
+			keep.set(sprint.startDate, sprint);
+		}
+	}
+	const remap = new Map<string, string>();
+	for (const sprint of sprints) {
+		const winner = keep.get(sprint.startDate);
+		if (winner && winner.id !== sprint.id) {
+			remap.set(sprint.id, winner.id);
+		}
+	}
+	return {
+		sprints: [...keep.values()],
+		tickets:
+			remap.size === 0
+				? tickets
+				: tickets.map((ticket) =>
+						ticket.sprintId && remap.has(ticket.sprintId)
+							? { ...ticket, sprintId: remap.get(ticket.sprintId)! }
+							: ticket,
+					),
+	};
+}
+
 export function mergeSnapshots(disk: DiskSnapshot, local: ProgressSnapshot): ProgressSnapshot {
 	const preferDiskSettings = snapshotHasProgress(disk);
+	const { sprints, tickets } = dedupeSprints(
+		unionById(disk.sprints.map((row) => normalizeSprint(row)), local.sprints),
+		mergeTickets(disk.tickets, local.tickets),
+	);
 	return {
 		roadmaps: unionById(disk.roadmaps, local.roadmaps),
 		items: mergeCourseItems(disk.items, local.items),
 		drops: unionById(disk.drops, local.drops),
 		completions: unionById(disk.completions, local.completions),
 		sessions: mergeSessions(disk.sessions, local.sessions),
-		sprints: unionById(disk.sprints.map((row) => normalizeSprint(row)), local.sprints),
-		tickets: mergeTickets(disk.tickets, local.tickets),
+		sprints,
+		tickets,
 		reviews: unionById(disk.reviews, local.reviews),
 		settings: preferDiskSettings ? { ...local.settings, ...disk.settings } : local.settings,
 	};

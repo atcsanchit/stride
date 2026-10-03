@@ -2,11 +2,21 @@ import {
 	ensureProfileForGoogleEmail,
 	loadProfilesFromIdb,
 	readAccountSession,
+	siblingProfilesForEmail,
 	upsertProfileLocal,
 	writeUserIndexFromList,
 } from './accounts';
-import { loadAll, loadIdentity, loadLocalSnapshot, mergeSnapshots, replaceAll, type ProgressSnapshot } from './db';
+import {
+	loadAll,
+	loadIdentity,
+	loadLocalSnapshot,
+	mergeSnapshots,
+	progressDbName,
+	replaceAll,
+	type ProgressSnapshot,
+} from './db';
 import { clearDriveFileCache, listStrideJsonNames, readDriveJson, writeDriveJson } from './drive-api';
+import { databaseExists } from './idb';
 import {
 	clearDriveSession,
 	currentAccessToken,
@@ -175,6 +185,11 @@ export async function signInWithGoogle(options?: { pickAccount?: boolean }): Pro
 	const profile = await ensureProfileForGoogleEmail(nextEmail, restored.remoteUserIds, {
 		claimUnlinkedLocal: !previous || previous === nextEmail,
 	});
+	try {
+		await recoverIntoProfile(profile.id, true);
+	} catch (error) {
+		console.error('Profile recovery failed', error);
+	}
 	accountsDirty = true;
 	dirtyProfiles.clear();
 	dirtyProfiles.add(profile.id);
@@ -289,6 +304,57 @@ async function applyMergedSnapshot(profileId: string, merged: ProgressSnapshot, 
 		writeLastPushed(profileId, remoteUpdatedAt);
 	}
 	emitData(profileId);
+}
+
+export type RecoveryResult = { profilesMerged: number; ticketsRecovered: number };
+
+/**
+ * Fold every other profile linked to this Gmail (local IndexedDB and its Drive JSON) into `profileId`.
+ * Sources are left untouched, so running this twice is harmless.
+ */
+export async function recoverIntoProfile(profileId: string, interactive: boolean): Promise<RecoveryResult> {
+	const email = currentDriveEmail();
+	const siblings = email ? await siblingProfilesForEmail(email, profileId) : [];
+	if (siblings.length === 0) {
+		return { profilesMerged: 0, ticketsRecovered: 0 };
+	}
+	const before = await loadLocalSnapshot(profileId);
+	let merged = before;
+	let profilesMerged = 0;
+	const canReadDrive = driveConfigured() && (interactive || Boolean(currentAccessToken()));
+	for (const sibling of siblings) {
+		let touched = false;
+		if (await databaseExists(progressDbName(sibling.id))) {
+			merged = mergeSnapshots(merged, await loadLocalSnapshot(sibling.id));
+			touched = true;
+		}
+		if (canReadDrive) {
+			try {
+				const remote = await readDriveJson<DriveSnapshotFile>(snapshotFileName(sibling.id), interactive);
+				if (remote?.kind === 'stride-drive-snapshot' && remote.snapshot) {
+					merged = mergeSnapshots(merged, remote.snapshot);
+					touched = true;
+				}
+			} catch (error) {
+				console.error(`Could not read ${sibling.id} from Drive`, error);
+			}
+		}
+		if (touched) {
+			profilesMerged += 1;
+		}
+	}
+	const beforeIds = new Set(before.tickets.map((ticket) => ticket.id));
+	const ticketsRecovered = merged.tickets.filter((ticket) => !beforeIds.has(ticket.id)).length;
+	const gained =
+		ticketsRecovered > 0 ||
+		merged.completions.length > before.completions.length ||
+		merged.sessions.length > before.sessions.length ||
+		merged.items.filter((item) => item.done).length > before.items.filter((item) => item.done).length;
+	if (gained) {
+		await applyMergedSnapshot(profileId, merged);
+		dirtyProfiles.add(profileId);
+	}
+	return { profilesMerged, ticketsRecovered };
 }
 
 async function applyRemoteSnapshot(profileId: string, remote: DriveSnapshotFile): Promise<void> {
@@ -481,18 +547,27 @@ export async function flushDriveSync(interactive = false): Promise<void> {
 	}
 }
 
-export async function syncDriveNow(): Promise<void> {
+export async function syncDriveNow(activeProfileId?: string | null): Promise<RecoveryResult> {
 	if (!driveConfigured()) {
 		throw new Error('Add VITE_GOOGLE_CLIENT_ID first.');
 	}
 	await requestGoogleToken(true);
+	let recovery: RecoveryResult = { profilesMerged: 0, ticketsRecovered: 0 };
+	if (activeProfileId) {
+		await pullProfileFromDrive(activeProfileId, true);
+		recovery = await recoverIntoProfile(activeProfileId, true);
+	}
 	const users = await profilesForCurrentDrive();
 	accountsDirty = true;
 	dirtyProfiles.clear();
 	for (const user of users) {
 		dirtyProfiles.add(user.id);
 	}
+	if (activeProfileId) {
+		dirtyProfiles.add(activeProfileId);
+	}
 	await flushDriveSync(true);
+	return recovery;
 }
 
 export function attachDriveLeaveSync(getActiveProfileId?: () => string | null): () => void {
