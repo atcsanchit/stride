@@ -1570,6 +1570,97 @@ button.tag-chip {
 	padding: 0.62rem 0.9rem;
 }
 
+.gate-workspaces {
+	list-style: none;
+	margin: 0 0 0.85rem;
+	padding: 0;
+	display: grid;
+	gap: 0.45rem;
+}
+
+.gate-workspace {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	text-align: left;
+	padding: 0.75rem 0.85rem;
+	border-radius: 14px;
+	border: 1px solid var(--line);
+	background: var(--shade);
+}
+
+.gate-workspace:hover:not(:disabled) {
+	border-color: color-mix(in srgb, var(--ai) 40%, var(--line));
+	background: color-mix(in srgb, var(--ai) 8%, var(--shade));
+}
+
+.gate-workspace-main {
+	display: grid;
+	gap: 0.2rem;
+	min-width: 0;
+}
+
+.gate-workspace-main strong {
+	font-size: 0.98rem;
+}
+
+.gate-workspace-main small {
+	color: var(--muted);
+	font-size: 0.78rem;
+	line-height: 1.35;
+}
+
+.gate-workspace-open {
+	flex: 0 0 auto;
+	font-size: 0.78rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--ai);
+	font-weight: 600;
+}
+
+.gate-workspace-create {
+	margin-top: 0.35rem;
+}
+
+.account-workspace-list {
+	display: grid;
+	gap: 0.2rem;
+	padding: 0.15rem 0.35rem 0.45rem;
+}
+
+.account-workspace-list button {
+	width: 100%;
+	display: block;
+	text-align: left;
+	padding: 0.55rem 0.65rem;
+	border-radius: 10px;
+	border: 1px solid transparent;
+	background: var(--shade);
+}
+
+.account-workspace-list button:hover:not(:disabled) {
+	border-color: var(--line);
+}
+
+.account-workspace-list button:disabled {
+	opacity: 0.72;
+}
+
+.account-workspace-list strong {
+	display: block;
+	font-size: 0.88rem;
+}
+
+.account-workspace-list small {
+	display: block;
+	margin-top: 0.15rem;
+	color: var(--muted);
+	font-size: 0.72rem;
+}
+
 .gate-split {
 	display: flex;
 	align-items: center;

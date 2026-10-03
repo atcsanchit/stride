@@ -230,6 +230,63 @@ async function uniqueNameFromEmail(email: string): Promise<string> {
 	return candidate;
 }
 
+export type WorkspaceSummary = {
+	profile: Profile;
+	tickets: number;
+	completions: number;
+	sessions: number;
+	doneItems: number;
+};
+
+export async function profilesForGoogleEmail(email: string, remoteUserIds: string[] = []): Promise<Profile[]> {
+	const key = email.trim().toLowerCase();
+	if (!key) {
+		return [];
+	}
+	const local = await loadProfilesFromIdb();
+	const matched = local.filter(
+		(row) => (row.googleEmail ?? '').trim().toLowerCase() === key || remoteUserIds.includes(row.id),
+	);
+	for (const row of matched) {
+		if ((row.googleEmail ?? '').trim().toLowerCase() !== key) {
+			await saveProfile({ ...row, googleEmail: key });
+		}
+	}
+	return (await loadProfilesFromIdb())
+		.filter((row) => (row.googleEmail ?? '').trim().toLowerCase() === key)
+		.sort((a, b) => b.lastSeenAt - a.lastSeenAt);
+}
+
+export async function summarizeWorkspace(profile: Profile): Promise<WorkspaceSummary> {
+	if (!(await databaseExists(progressDbName(profile.id)))) {
+		return { profile, tickets: 0, completions: 0, sessions: 0, doneItems: 0 };
+	}
+	const snapshot = await loadAll(profile.id);
+	return {
+		profile,
+		tickets: snapshot.tickets.length,
+		completions: snapshot.completions.length,
+		sessions: snapshot.sessions.length,
+		doneItems: snapshot.items.filter((item) => item.done).length,
+	};
+}
+
+export async function summarizeWorkspaces(profiles: Profile[]): Promise<WorkspaceSummary[]> {
+	const rows = await Promise.all(profiles.map((profile) => summarizeWorkspace(profile)));
+	return rows.sort((a, b) => {
+		const scoreA = a.tickets * 20 + a.completions + a.doneItems;
+		const scoreB = b.tickets * 20 + b.completions + b.doneItems;
+		if (scoreA !== scoreB) {
+			return scoreB - scoreA;
+		}
+		return b.profile.lastSeenAt - a.profile.lastSeenAt;
+	});
+}
+
+/**
+ * Resolve Google login to workspaces. Never invents a second empty profile when one already exists.
+ * Creates a first workspace only when this Gmail has none yet.
+ */
 export async function ensureProfileForGoogleEmail(
 	email: string,
 	remoteUserIds: string[] = [],
@@ -240,10 +297,7 @@ export async function ensureProfileForGoogleEmail(
 		throw new Error('Google did not return an email.');
 	}
 	const now = Date.now();
-	const local = await loadProfilesFromIdb();
-	const candidates = local.filter(
-		(row) => (row.googleEmail ?? '').trim().toLowerCase() === key || remoteUserIds.includes(row.id),
-	);
+	const candidates = await profilesForGoogleEmail(key, remoteUserIds);
 	if (candidates.length > 0) {
 		const best = await richestProfile(candidates);
 		const next = { ...best, lastSeenAt: now, googleEmail: key };
@@ -251,6 +305,7 @@ export async function ensureProfileForGoogleEmail(
 		return next;
 	}
 
+	const local = await loadProfilesFromIdb();
 	const unlinked = local.filter((row) => !row.googleEmail);
 	if (options?.claimUnlinkedLocal !== false && unlinked.length === 1 && remoteUserIds.length === 0) {
 		const next = { ...unlinked[0], googleEmail: key, lastSeenAt: now };
@@ -258,11 +313,22 @@ export async function ensureProfileForGoogleEmail(
 		return next;
 	}
 
-	const name = await uniqueNameFromEmail(key);
+	return createGoogleWorkspace(key);
+}
+
+/** Explicit new workspace under this Gmail — kept separate until the user merges. */
+export async function createGoogleWorkspace(email: string, name?: string): Promise<Profile> {
+	const key = email.trim().toLowerCase();
+	if (!key) {
+		throw new Error('Google did not return an email.');
+	}
+	const now = Date.now();
+	const label = name?.trim() || (await uniqueNameFromEmail(key));
+	await assertUniqueUsername(label);
 	const created: Profile = {
 		id: createId(),
-		name,
-		nameKey: nameKey(name),
+		name: label,
+		nameKey: nameKey(label),
 		focusTrack: 'ai-engineering',
 		pinSalt: '',
 		pinHash: '',
@@ -285,7 +351,7 @@ async function progressScore(profileId: string): Promise<number> {
 	);
 }
 
-/** Several profiles can share one Gmail; open the one holding the most work, not the most recent. */
+/** Prefer the workspace with the most work when a default is needed. */
 async function richestProfile(profiles: Profile[]): Promise<Profile> {
 	let best = profiles[0];
 	let bestScore = -2;
@@ -299,15 +365,13 @@ async function richestProfile(profiles: Profile[]): Promise<Profile> {
 	return best;
 }
 
-/** Other local profiles linked to the same Gmail — their data belongs to the same person. */
+/** Other local profiles linked to the same Gmail. */
 export async function siblingProfilesForEmail(email: string, exceptId: string): Promise<Profile[]> {
 	const key = email.trim().toLowerCase();
 	if (!key) {
 		return [];
 	}
-	return (await loadProfilesFromIdb()).filter(
-		(row) => row.id !== exceptId && (row.googleEmail ?? '').trim().toLowerCase() === key,
-	);
+	return (await profilesForGoogleEmail(key)).filter((row) => row.id !== exceptId);
 }
 
 export async function pickProfileForName(name: string): Promise<Profile | undefined> {

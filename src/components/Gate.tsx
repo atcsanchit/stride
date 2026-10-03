@@ -1,17 +1,38 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TRACKS } from '../constants';
 import { useStride } from '../store/StrideState';
 
 export function Gate() {
-	const { profiles, createProfile, signInByName, importBackupFile, drive, connectDrive } = useStride();
+	const {
+		profiles,
+		createProfile,
+		signInByName,
+		importBackupFile,
+		drive,
+		connectDrive,
+		googleWorkspaces,
+		refreshGoogleWorkspaces,
+		openGoogleWorkspace,
+		createGoogleWorkspace,
+	} = useStride();
 	const [mode, setMode] = useState<'login' | 'signup'>(profiles.length > 0 ? 'login' : 'signup');
 	const [name, setName] = useState('');
 	const [pin, setPin] = useState('');
+	const [workspaceName, setWorkspaceName] = useState('');
+	const [creatingWorkspace, setCreatingWorkspace] = useState(false);
 	const [error, setError] = useState('');
 	const [busy, setBusy] = useState(false);
 	const backupRef = useRef<HTMLInputElement>(null);
 	const email = drive.email ?? '';
 	const localPart = email.split('@')[0] || 'Google';
+	const showWorkspaces = drive.connected && googleWorkspaces.length > 0;
+
+	useEffect(() => {
+		if (!drive.connected) {
+			return;
+		}
+		void refreshGoogleWorkspaces();
+	}, [drive.connected, drive.email, refreshGoogleWorkspaces]);
 
 	async function run(action: () => Promise<void>) {
 		setBusy(true);
@@ -58,8 +79,12 @@ export function Gate() {
 				<div className="gate-auth-inner">
 					<header className="gate-auth-head">
 						<p className="eyebrow">Enter</p>
-						<h2>Pick how you start</h2>
-						<p className="muted">Google keeps a Drive backup. Local stays on this browser only.</p>
+						<h2>{showWorkspaces ? 'Choose a workspace' : 'Pick how you start'}</h2>
+						<p className="muted">
+							{showWorkspaces
+								? 'One Google account can hold several Stride workspaces. Open one to see only its tickets and progress.'
+								: 'Google keeps a Drive backup. Local stays on this browser only.'}
+						</p>
 					</header>
 
 					{error ? <p className="error">{error}</p> : null}
@@ -70,7 +95,7 @@ export function Gate() {
 								<p className="eyebrow">Recommended</p>
 								<span className="gate-badge">Google</span>
 							</div>
-							<h3>{drive.connected ? 'Welcome back' : 'Continue with Google'}</h3>
+							<h3>{showWorkspaces ? 'Your workspaces' : drive.connected ? 'Welcome back' : 'Continue with Google'}</h3>
 							{drive.connected && email ? (
 								<div className="gate-identity">
 									<span className="gate-avatar" aria-hidden="true">
@@ -78,7 +103,11 @@ export function Gate() {
 									</span>
 									<div>
 										<strong>{email}</strong>
-										<p>Personal Drive linked. Continue opens this workspace, then courses if it is new.</p>
+										<p>
+											{showWorkspaces
+												? `${googleWorkspaces.length} workspace${googleWorkspaces.length === 1 ? '' : 's'} on this account. Opening one does not mix them.`
+												: 'Personal Drive linked. Continue opens this workspace, then courses if it is new.'}
+										</p>
 									</div>
 								</div>
 							) : (
@@ -87,31 +116,114 @@ export function Gate() {
 								</p>
 							)}
 							{drive.lastError ? <p className="error">{drive.lastError}</p> : null}
-							<div className="gate-actions">
-								<button
-									className="primary"
-									type="button"
-									disabled={busy || drive.syncing}
-									onClick={() => {
-										void run(() => connectDrive({ pickAccount: !drive.connected }));
-									}}
-								>
-									{drive.syncing
-										? 'Opening…'
-										: drive.connected
-											? `Continue as ${localPart}`
-											: 'Continue with Google'}
-								</button>
-								<button
-									type="button"
-									disabled={busy || drive.syncing}
-									onClick={() => {
-										void run(() => connectDrive({ pickAccount: true }));
-									}}
-								>
-									Use a different Google account
-								</button>
-							</div>
+
+							{showWorkspaces ? (
+								<>
+									<ul className="gate-workspaces">
+										{googleWorkspaces.map((row) => (
+											<li key={row.profile.id}>
+												<button
+													type="button"
+													className="gate-workspace"
+													disabled={busy || drive.syncing}
+													onClick={() => {
+														void run(() => openGoogleWorkspace(row.profile.id));
+													}}
+												>
+													<span className="gate-workspace-main">
+														<strong>{row.profile.name}</strong>
+														<small>
+															{row.tickets} tickets · {row.completions} reviews · {row.sessions} sessions
+															{row.doneItems > 0 ? ` · ${row.doneItems} course done` : ''}
+														</small>
+													</span>
+													<span className="gate-workspace-open">Open</span>
+												</button>
+											</li>
+										))}
+									</ul>
+									{creatingWorkspace ? (
+										<form
+											className="gate-workspace-create"
+											onSubmit={(event) => {
+												event.preventDefault();
+												void run(async () => {
+													await createGoogleWorkspace(workspaceName);
+													setWorkspaceName('');
+													setCreatingWorkspace(false);
+												});
+											}}
+										>
+											<label className="field">
+												New workspace name
+												<input
+													value={workspaceName}
+													onChange={(event) => setWorkspaceName(event.target.value)}
+													placeholder="e.g. ATC prep"
+													autoFocus
+													required
+												/>
+											</label>
+											<div className="gate-actions">
+												<button className="primary" type="submit" disabled={busy || !workspaceName.trim()}>
+													Create and open
+												</button>
+												<button
+													type="button"
+													disabled={busy}
+													onClick={() => {
+														setCreatingWorkspace(false);
+														setWorkspaceName('');
+													}}
+												>
+													Cancel
+												</button>
+											</div>
+										</form>
+									) : (
+										<div className="gate-actions">
+											<button type="button" disabled={busy} onClick={() => setCreatingWorkspace(true)}>
+												Create another workspace
+											</button>
+											<button
+												type="button"
+												disabled={busy || drive.syncing}
+												onClick={() => {
+													void run(() => connectDrive({ pickAccount: true }));
+												}}
+											>
+												Use a different Google account
+											</button>
+										</div>
+									)}
+								</>
+							) : (
+								<div className="gate-actions">
+									<button
+										className="primary"
+										type="button"
+										disabled={busy || drive.syncing}
+										onClick={() => {
+											void run(() => connectDrive({ pickAccount: !drive.connected }));
+										}}
+									>
+										{drive.syncing
+											? 'Opening…'
+											: drive.connected
+												? `Continue as ${localPart}`
+												: 'Continue with Google'}
+									</button>
+									<button
+										type="button"
+										disabled={busy || drive.syncing}
+										onClick={() => {
+											void run(() => connectDrive({ pickAccount: true }));
+										}}
+									>
+										Use a different Google account
+									</button>
+								</div>
+							)}
 						</section>
 					) : (
 						<p className="muted storage-note">
