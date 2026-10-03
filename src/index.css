@@ -2111,6 +2111,126 @@ button.status-pill.is-on {
 	text-align: left;
 }
 
+.modal-course {
+	width: min(560px, 100%);
+	max-height: min(92vh, 840px);
+	overflow: auto;
+}
+
+.modal-course h2 {
+	margin: 0.2rem 0 0.45rem;
+	font-size: 1.55rem;
+}
+
+.course-upload-lede {
+	margin: 0 0 1rem;
+	line-height: 1.45;
+}
+
+.course-upload-stats {
+	display: grid;
+	grid-template-columns: 1fr 1.4fr;
+	gap: 0.55rem;
+	margin: 0 0 1rem;
+}
+
+.course-upload-stats span {
+	display: grid;
+	gap: 0.15rem;
+	padding: 0.65rem 0.75rem;
+	border-radius: 14px;
+	border: 1px solid var(--line);
+	background: var(--shade);
+	min-width: 0;
+}
+
+.course-upload-stats strong {
+	font-size: 0.95rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.course-upload-stats small {
+	color: var(--muted);
+	font-size: 0.72rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.course-upload-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.65rem;
+}
+
+.course-upload-extra {
+	margin: 0.75rem 0 0;
+	font-size: 0.8rem;
+	line-height: 1.4;
+}
+
+.course-upload-mode {
+	margin: 1rem 0 0;
+	padding: 0.75rem 0.85rem;
+	border-radius: 14px;
+	border: 1px solid var(--line);
+	display: grid;
+	gap: 0.45rem;
+}
+
+.course-upload-mode legend {
+	padding: 0 0.25rem;
+	font-size: 0.78rem;
+	color: var(--muted);
+}
+
+.course-upload-mode label {
+	display: flex;
+	gap: 0.5rem;
+	align-items: flex-start;
+	font-size: 0.9rem;
+	line-height: 1.35;
+}
+
+.modal-actions {
+	display: grid;
+	grid-template-columns: 1fr 1.2fr;
+	gap: 0.5rem;
+	margin-top: 1.15rem;
+}
+
+.modal-actions button {
+	justify-content: center;
+}
+
+.modal-course textarea {
+	width: 100%;
+	border-radius: 12px;
+	border: 1px solid var(--line);
+	background: var(--shade);
+	padding: 0.55rem 0.7rem;
+	color: inherit;
+	font: inherit;
+	resize: vertical;
+	min-height: 5.5rem;
+}
+
+@media (max-width: 560px) {
+	.course-upload-grid,
+	.course-upload-stats,
+	.modal-actions {
+		grid-template-columns: 1fr;
+	}
+}
+
+.roadmap-card-meta {
+	margin: 0.35rem 0 0;
+	font-size: 0.82rem;
+	line-height: 1.4;
+	color: var(--muted);
+}
+
 .field-label {
 	margin: 0.8rem 0 0.35rem;
 	color: var(--muted);

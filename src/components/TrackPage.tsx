@@ -131,6 +131,17 @@ export function TrackPage({ trackId }: { trackId: TrackId }) {
 							<p className="muted">
 								{roadmap.filename} · {roadmap.origin}
 							</p>
+							{roadmap.summary || roadmap.goal || roadmap.exam || roadmap.details ? (
+								<p className="roadmap-card-meta">
+									{[roadmap.summary, roadmap.goal, roadmap.exam].filter(Boolean).join(' · ')}
+									{roadmap.details ? (
+										<>
+											<br />
+											{roadmap.details}
+										</>
+									) : null}
+								</p>
+							) : null}
 						</div>
 						{roadmap.origin === 'dropped' ? (
 							<button className="ghost" type="button" onClick={() => void removeRoadmap(roadmap.id)}>

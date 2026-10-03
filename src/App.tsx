@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { AppShell } from './components/AppShell';
 import { CompleteModal } from './components/CompleteModal';
+import { CourseUploadModal } from './components/CourseUploadModal';
 import { CourseSetup } from './components/CourseSetup';
 import { Dashboard } from './components/Dashboard';
 import { DayLog } from './components/DayLog';
@@ -96,6 +97,7 @@ export default function App() {
 			</AppShell>
 			<TimerDock />
 			<CompleteModal />
+			<CourseUploadModal />
 			{dragging ? (
 				<div className="drop-overlay">
 					<span>Drop markdown roadmaps</span>
