@@ -16,12 +16,20 @@ export function AccountBar() {
 		disconnectDrive,
 		openSettings,
 		openHome,
+		googleWorkspaces,
+		refreshGoogleWorkspaces,
+		openGoogleWorkspace,
+		createGoogleWorkspace,
+		mergeGoogleWorkspaces,
 	} = useStride();
 	const fileRef = useRef<HTMLInputElement>(null);
 	const menuRef = useRef<HTMLDivElement>(null);
 	const [open, setOpen] = useState(false);
 	const [pinDraft, setPinDraft] = useState('');
 	const [pinOpen, setPinOpen] = useState(false);
+	const [workspacePanel, setWorkspacePanel] = useState<'none' | 'switch' | 'create'>('none');
+	const [newWorkspaceName, setNewWorkspaceName] = useState('');
+	const [busy, setBusy] = useState(false);
 	const menuId = useId();
 
 	useEffect(() => {
@@ -32,12 +40,14 @@ export function AccountBar() {
 			if (!menuRef.current?.contains(event.target as Node)) {
 				setOpen(false);
 				setPinOpen(false);
+				setWorkspacePanel('none');
 			}
 		};
 		const onKey = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') {
 				setOpen(false);
 				setPinOpen(false);
+				setWorkspacePanel('none');
 			}
 		};
 		window.addEventListener('mousedown', onPointer);
@@ -48,6 +58,12 @@ export function AccountBar() {
 		};
 	}, [open]);
 
+	useEffect(() => {
+		if (open && drive.connected) {
+			void refreshGoogleWorkspaces();
+		}
+	}, [open, drive.connected, refreshGoogleWorkspaces]);
+
 	if (!profile) {
 		return null;
 	}
@@ -57,6 +73,17 @@ export function AccountBar() {
 		: drive.configured
 			? 'Device only'
 			: 'This device';
+	const siblings = googleWorkspaces.filter((row) => row.profile.id !== profile.id);
+	const canMerge = drive.connected && siblings.some((row) => row.tickets > 0 || row.completions > 0 || row.sessions > 0);
+
+	async function run(action: () => Promise<void>) {
+		setBusy(true);
+		try {
+			await action();
+		} finally {
+			setBusy(false);
+		}
+	}
 
 	return (
 		<header className="app-top">
@@ -117,14 +144,105 @@ export function AccountBar() {
 									<button
 										type="button"
 										role="menuitem"
-										disabled={drive.syncing}
+										disabled={drive.syncing || busy}
 										onClick={() => {
 											void syncDriveNow();
 											setOpen(false);
 										}}
 									>
-										Sync Drive
+										Sync this workspace
 									</button>
+									<button
+										type="button"
+										role="menuitem"
+										disabled={busy}
+										onClick={() => setWorkspacePanel((value) => (value === 'switch' ? 'none' : 'switch'))}
+									>
+										Switch workspace
+									</button>
+									{workspacePanel === 'switch' ? (
+										<div className="account-workspace-list">
+											{googleWorkspaces.map((row) => {
+												const active = row.profile.id === profile.id;
+												return (
+													<button
+														key={row.profile.id}
+														type="button"
+														disabled={busy || active}
+														onClick={() => {
+															void run(async () => {
+																await openGoogleWorkspace(row.profile.id);
+																setOpen(false);
+																setWorkspacePanel('none');
+															});
+														}}
+													>
+														<span>
+															<strong>{row.profile.name}</strong>
+															<small>
+																{row.tickets} tickets · {row.completions} reviews
+																{active ? ' · open' : ''}
+															</small>
+														</span>
+													</button>
+												);
+											})}
+										</div>
+									) : null}
+									<button
+										type="button"
+										role="menuitem"
+										disabled={busy}
+										onClick={() => setWorkspacePanel((value) => (value === 'create' ? 'none' : 'create'))}
+									>
+										New workspace
+									</button>
+									{workspacePanel === 'create' ? (
+										<form
+											className="account-pin-form"
+											onSubmit={(event) => {
+												event.preventDefault();
+												void run(async () => {
+													await createGoogleWorkspace(newWorkspaceName);
+													setNewWorkspaceName('');
+													setWorkspacePanel('none');
+													setOpen(false);
+												});
+											}}
+										>
+											<input
+												placeholder="Workspace name"
+												value={newWorkspaceName}
+												onChange={(event) => setNewWorkspaceName(event.target.value)}
+												autoFocus
+											/>
+											<button className="primary" type="submit" disabled={busy || !newWorkspaceName.trim()}>
+												Create
+											</button>
+										</form>
+									) : null}
+									{canMerge ? (
+										<button
+											type="button"
+											role="menuitem"
+											disabled={busy || drive.syncing}
+											onClick={() => {
+												if (
+													!window.confirm(
+														`Merge tickets and progress from ${siblings.length} other workspace(s) into “${profile.name}”? Other workspace files stay on Drive; you can still open them separately.`,
+													)
+												) {
+													return;
+												}
+												void run(async () => {
+													await mergeGoogleWorkspaces();
+													setOpen(false);
+												});
+											}}
+										>
+											Merge others into this
+										</button>
+									) : null}
 									<button
 										type="button"
 										role="menuitem"

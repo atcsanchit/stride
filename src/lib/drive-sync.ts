@@ -1,10 +1,14 @@
 import {
+	createGoogleWorkspace,
 	ensureProfileForGoogleEmail,
 	loadProfilesFromIdb,
+	profilesForGoogleEmail,
 	readAccountSession,
 	siblingProfilesForEmail,
+	summarizeWorkspaces,
 	upsertProfileLocal,
 	writeUserIndexFromList,
+	type WorkspaceSummary,
 } from './accounts';
 import {
 	loadAll,
@@ -159,12 +163,14 @@ async function profilesForCurrentDrive(): Promise<Profile[]> {
 	if (!email) {
 		return [];
 	}
-	return (await loadProfilesFromIdb()).filter((user) => user.googleEmail === email);
+	return profilesForGoogleEmail(email);
 }
 
 export async function signInWithGoogle(options?: { pickAccount?: boolean }): Promise<{
 	status: DriveStatus;
-	profile: Profile;
+	workspaces: WorkspaceSummary[];
+	/** Present only when there is exactly one workspace — safe to open immediately. */
+	profile: Profile | null;
 }> {
 	if (!driveConfigured()) {
 		throw new Error('Add VITE_GOOGLE_CLIENT_ID, then rebuild. Use a personal Gmail, not work.');
@@ -182,19 +188,43 @@ export async function signInWithGoogle(options?: { pickAccount?: boolean }): Pro
 	setError(null);
 	emit();
 	const restored = await restoreFromDrive(true, nextEmail);
-	const profile = await ensureProfileForGoogleEmail(nextEmail, restored.remoteUserIds, {
-		claimUnlinkedLocal: !previous || previous === nextEmail,
-	});
-	try {
-		await recoverIntoProfile(profile.id, true);
-	} catch (error) {
-		console.error('Profile recovery failed', error);
+	let workspaces = await summarizeWorkspaces(await profilesForGoogleEmail(nextEmail, restored.remoteUserIds));
+	if (workspaces.length === 0) {
+		const created = await ensureProfileForGoogleEmail(nextEmail, restored.remoteUserIds, {
+			claimUnlinkedLocal: !previous || previous === nextEmail,
+		});
+		workspaces = await summarizeWorkspaces([created]);
 	}
 	accountsDirty = true;
-	dirtyProfiles.clear();
-	dirtyProfiles.add(profile.id);
+	const alone = workspaces.length === 1 ? workspaces[0].profile : null;
+	if (alone) {
+		dirtyProfiles.add(alone.id);
+		await flushDriveSync(true);
+	}
+	return { status: getDriveStatus(), workspaces, profile: alone };
+}
+
+export async function createLinkedGoogleWorkspace(name?: string): Promise<Profile> {
+	const email = currentDriveEmail();
+	if (!email) {
+		throw new Error('Connect Google first.');
+	}
+	const created = await createGoogleWorkspace(email, name);
+	accountsDirty = true;
+	dirtyProfiles.add(created.id);
 	await flushDriveSync(true);
-	return { status: getDriveStatus(), profile };
+	return created;
+}
+
+/** Explicit merge of every other workspace on this Gmail into `profileId`. Sources stay on Drive. */
+export async function mergeGoogleWorkspacesInto(profileId: string): Promise<RecoveryResult> {
+	const result = await recoverIntoProfile(profileId, true);
+	if (result.profilesMerged > 0 || result.ticketsRecovered > 0) {
+		dirtyProfiles.add(profileId);
+		accountsDirty = true;
+		await flushDriveSync(true);
+	}
+	return result;
 }
 
 export async function connectGoogleDrive(): Promise<DriveStatus> {
@@ -547,15 +577,13 @@ export async function flushDriveSync(interactive = false): Promise<void> {
 	}
 }
 
-export async function syncDriveNow(activeProfileId?: string | null): Promise<RecoveryResult> {
+export async function syncDriveNow(activeProfileId?: string | null): Promise<void> {
 	if (!driveConfigured()) {
 		throw new Error('Add VITE_GOOGLE_CLIENT_ID first.');
 	}
 	await requestGoogleToken(true);
-	let recovery: RecoveryResult = { profilesMerged: 0, ticketsRecovered: 0 };
 	if (activeProfileId) {
 		await pullProfileFromDrive(activeProfileId, true);
-		recovery = await recoverIntoProfile(activeProfileId, true);
 	}
 	const users = await profilesForCurrentDrive();
 	accountsDirty = true;
@@ -567,7 +595,6 @@ export async function syncDriveNow(activeProfileId?: string | null): Promise<Rec
 		dirtyProfiles.add(activeProfileId);
 	}
 	await flushDriveSync(true);
-	return recovery;
 }
 
 export function attachDriveLeaveSync(getActiveProfileId?: () => string | null): () => void {

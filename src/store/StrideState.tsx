@@ -9,7 +9,23 @@ import {
 	type ReactNode,
 } from 'react';
 import { emptySettings, enabledTrackIds, firstName, isTrackEnabled, TRACKS } from '../constants';
-import { deleteProfile as deleteProfileRecord, assertUniqueUsername, hasPin, loadProfiles, pickProfileForName, readAccountSession, reconcileAccounts, saveProfile, setPin, unlockProfile, updateProfileDetails, type ProfileDetails } from '../lib/accounts';
+import {
+	deleteProfile as deleteProfileRecord,
+	assertUniqueUsername,
+	hasPin,
+	loadProfiles,
+	pickProfileForName,
+	profilesForGoogleEmail,
+	readAccountSession,
+	reconcileAccounts,
+	saveProfile,
+	setPin,
+	summarizeWorkspaces,
+	unlockProfile,
+	updateProfileDetails,
+	type ProfileDetails,
+	type WorkspaceSummary,
+} from '../lib/accounts';
 import { buildBackup, downloadBackup, parseBackup } from '../lib/backup';
 import { loadBundledRoadmaps } from '../lib/bundled';
 import { coachNote, todayPlan, trackStats } from '../lib/coach';
@@ -41,10 +57,12 @@ import { applyGrade, prettyInterval, seedReviewCard, syncReviewCards } from '../
 import { clearSession, readSession, rememberPinUnlock, restoreView, writeSession, writeView } from '../lib/session';
 import {
 	attachDriveLeaveSync,
+	createLinkedGoogleWorkspace,
 	disconnectGoogleDrive,
 	signInWithGoogle,
 	getDriveStatus,
 	installDrivePersistHooks,
+	mergeGoogleWorkspacesInto,
 	pullProfileFromDrive,
 	restoreFromDrive,
 	subscribeDriveData,
@@ -202,7 +220,12 @@ interface StrideContextValue {
 	exportBackup: () => void;
 	importBackupFile: (file: File) => Promise<void>;
 	drive: DriveStatus;
+	googleWorkspaces: WorkspaceSummary[];
 	connectDrive: (options?: { pickAccount?: boolean }) => Promise<void>;
+	refreshGoogleWorkspaces: () => Promise<WorkspaceSummary[]>;
+	openGoogleWorkspace: (profileId: string) => Promise<void>;
+	createGoogleWorkspace: (name: string) => Promise<void>;
+	mergeGoogleWorkspaces: () => Promise<void>;
 	syncDriveNow: () => Promise<void>;
 	disconnectDrive: () => void;
 	dismissToast: (id: string) => void;
@@ -234,6 +257,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const [phase, setPhase] = useState<Phase>('boot');
 	const [profile, setProfile] = useState<Profile | null>(null);
 	const [profiles, setProfiles] = useState<Profile[]>([]);
+	const [googleWorkspaces, setGoogleWorkspaces] = useState<WorkspaceSummary[]>([]);
 	const [view, setView] = useState<View>({ name: 'home' });
 	const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
 	const [items, setItems] = useState<RoadmapItem[]>([]);
@@ -561,11 +585,12 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			setProfiles(list);
 			const sessionId = readSession() ?? (await readAccountSession());
 			const email = (rememberedDriveEmail() ?? '').trim().toLowerCase();
-			const existing =
-				list.find((entry) => entry.id === sessionId) ??
-				(email ? list.find((entry) => (entry.googleEmail ?? '').trim().toLowerCase() === email) : undefined) ??
-				null;
-			// Resume whenever this browser still has a session. PIN is only for Gate login after Sign out.
+			const bySession = list.find((entry) => entry.id === sessionId) ?? null;
+			const forEmail = email
+				? list.filter((entry) => (entry.googleEmail ?? '').trim().toLowerCase() === email)
+				: [];
+			// Resume the last open workspace. If several share this Gmail and there is no session, pick at Gate.
+			const existing = bySession ?? (forEmail.length === 1 ? forEmail[0] : null);
 			if (existing) {
 				try {
 					await enterWorkspace(existing);
@@ -575,6 +600,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				}
 			}
 			if (bootGen.current === bootId) {
+				if (forEmail.length > 1) {
+					setGoogleWorkspaces(await summarizeWorkspaces(forEmail));
+				}
 				setPhase('gate');
 			}
 		})().catch((error: unknown) => {
@@ -1578,6 +1606,17 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		[requireProfile],
 	);
 
+	const refreshGoogleWorkspaces = useCallback(async () => {
+		const email = (drive.email || rememberedDriveEmail() || '').trim().toLowerCase();
+		if (!email) {
+			setGoogleWorkspaces([]);
+			return [];
+		}
+		const list = await summarizeWorkspaces(await profilesForGoogleEmail(email));
+		setGoogleWorkspaces(list);
+		return list;
+	}, [drive.email]);
+
 	const createProfile = useCallback(
 		async (input: { name: string; pin?: string }) => {
 			const name = input.name.trim();
@@ -1585,6 +1624,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				throw new Error('Name is required');
 			}
 			await assertUniqueUsername(name);
+			const googleEmail = (drive.email || rememberedDriveEmail() || '').trim().toLowerCase() || undefined;
 			let next: Profile = {
 				id: createId(),
 				name,
@@ -1594,6 +1634,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				pinHash: '',
 				createdAt: Date.now(),
 				lastSeenAt: Date.now(),
+				googleEmail,
 			};
 			if (input.pin) {
 				next = await setPin(next, input.pin);
@@ -1604,7 +1645,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			await enterWorkspace(next);
 			pushToast('Welcome', `${firstName(name)}, pick the courses this account should show.`);
 		},
-		[enterWorkspace, pushToast],
+		[drive.email, enterWorkspace, pushToast],
 	);
 
 	const signIn = useCallback(
@@ -1774,21 +1815,77 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	);
 
 	const connectDrive = useCallback(async (options?: { pickAccount?: boolean }) => {
-		const { status, profile: googleProfile } = await signInWithGoogle(options);
+		const { status, workspaces, profile: alone } = await signInWithGoogle(options);
 		const list = await loadProfiles();
 		setProfiles(list);
+		setGoogleWorkspaces(workspaces);
+		if (alone) {
+			pushToast(
+				'Logged in',
+				status.email
+					? `${status.email}. Opening your Stride workspace.`
+					: 'Signed in with Google.',
+			);
+			await enterWorkspace(alone);
+			return;
+		}
+		setPhase('gate');
 		pushToast(
-			'Logged in',
-			status.email
-				? `${status.email}. This Google account’s Stride. Pick a different Gmail and you open that person’s tickets, not this one.`
-				: 'Signed in with Google.',
+			'Choose a workspace',
+			`${status.email ?? 'Google'} has ${workspaces.length} Stride workspaces. Open one — they stay separate until you merge.`,
 		);
-		await enterWorkspace(googleProfile);
 	}, [enterWorkspace, pushToast]);
+
+	const openGoogleWorkspace = useCallback(
+		async (profileId: string) => {
+			const found =
+				googleWorkspaces.find((row) => row.profile.id === profileId)?.profile ??
+				(await loadProfiles()).find((entry) => entry.id === profileId);
+			if (!found) {
+				throw new Error('Workspace not found.');
+			}
+			await enterWorkspace(found);
+		},
+		[enterWorkspace, googleWorkspaces],
+	);
+
+	const createGoogleWorkspaceProfile = useCallback(
+		async (name: string) => {
+			const created = await createLinkedGoogleWorkspace(name);
+			const list = await loadProfiles();
+			setProfiles(list);
+			await refreshGoogleWorkspaces();
+			await enterWorkspace(created);
+			pushToast('Workspace created', `${firstName(created.name)} starts empty under this Google account.`);
+		},
+		[enterWorkspace, pushToast, refreshGoogleWorkspaces],
+	);
+
+	const mergeGoogleWorkspaces = useCallback(async () => {
+		const current = requireProfile();
+		const result = await mergeGoogleWorkspacesInto(current.id);
+		const loaded = await loadAll(current.id);
+		ticketsRef.current = loaded.tickets;
+		setRoadmaps(loaded.roadmaps);
+		setItems(loaded.items);
+		setDrops(loaded.drops);
+		setTickets(loaded.tickets);
+		setSprints(loaded.sprints);
+		setSessions(loaded.sessions);
+		setCompletions(loaded.completions);
+		setReviews(loaded.reviews ?? []);
+		await refreshGoogleWorkspaces();
+		pushToast(
+			result.ticketsRecovered > 0 ? 'Workspaces merged' : 'Nothing new to merge',
+			result.ticketsRecovered > 0
+				? `Pulled ${result.ticketsRecovered} ticket(s) from ${result.profilesMerged} other workspace(s) into ${current.name}. Other files stay on Drive.`
+				: 'This workspace already has everything from the others, or they were empty.',
+		);
+	}, [pushToast, refreshGoogleWorkspaces, requireProfile]);
 
 	const runDriveSync = useCallback(async () => {
 		const id = profileRef.current?.id ?? null;
-		const recovery = await pushDriveNow(id);
+		await pushDriveNow(id);
 		if (id) {
 			const loaded = await loadAll(id);
 			ticketsRef.current = loaded.tickets;
@@ -1801,16 +1898,13 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			setCompletions(loaded.completions);
 			setReviews(loaded.reviews ?? []);
 		}
-		pushToast(
-			'Drive synced',
-			recovery.ticketsRecovered > 0
-				? `Recovered ${recovery.ticketsRecovered} ticket(s) from ${recovery.profilesMerged} other profile(s) on this Google account.`
-				: 'Local and Drive were merged. Tickets from every browser should be here.',
-		);
-	}, [pushToast]);
+		await refreshGoogleWorkspaces();
+		pushToast('Drive synced', 'This workspace was merged with its own Drive file. Other workspaces stay separate.');
+	}, [pushToast, refreshGoogleWorkspaces]);
 
 	const disconnectDrive = useCallback(() => {
 		disconnectGoogleDrive();
+		setGoogleWorkspaces([]);
 		pushToast('Drive disconnected', 'This browser is local-only again. Files on Drive were not deleted.');
 	}, [pushToast]);
 
@@ -1901,7 +1995,12 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		exportBackup,
 		importBackupFile,
 		drive,
+		googleWorkspaces,
 		connectDrive,
+		refreshGoogleWorkspaces,
+		openGoogleWorkspace,
+		createGoogleWorkspace: createGoogleWorkspaceProfile,
+		mergeGoogleWorkspaces,
 		syncDriveNow: runDriveSync,
 		disconnectDrive,
 		dismissToast: (id) => setToasts((current) => current.filter((toast) => toast.id !== id)),
