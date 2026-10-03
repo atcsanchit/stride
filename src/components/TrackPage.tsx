@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { trackMeta } from '../constants';
+import { trackStats } from '../lib/coach';
 import { topicGuide, trackSourceGuide } from '../lib/topic-guides';
 import type { TrackId } from '../types';
 import { useStride } from '../store/StrideState';
@@ -26,10 +27,12 @@ function groupItems(items: { section: string; subsection: string; id: string }[]
 }
 
 export function TrackPage({ trackId }: { trackId: TrackId }) {
-	const { stats, items, roadmaps, openHome, openClass, setTarget, removeRoadmap, importFiles } = useStride();
+	const { stats, items, roadmaps, openHome, openClass, setTarget, removeRoadmap, importFiles, settings, completions } =
+		useStride();
 	const fileRef = useRef<HTMLInputElement>(null);
-	const meta = trackMeta(trackId);
-	const track = stats.find((entry) => entry.trackId === trackId);
+	const meta = trackMeta(trackId, settings);
+	const track =
+		stats.find((entry) => entry.trackId === trackId) ?? trackStats(trackId, items, completions, settings);
 	const owned = useMemo(
 		() => items.filter((item) => item.trackId === trackId),
 		[items, trackId],
@@ -37,10 +40,6 @@ export function TrackPage({ trackId }: { trackId: TrackId }) {
 	const groups = useMemo(() => groupItems(owned), [owned]);
 	const byId = useMemo(() => new Map(owned.map((item) => [item.id, item])), [owned]);
 	const maps = roadmaps.filter((entry) => entry.trackId === trackId);
-
-	if (!track) {
-		return null;
-	}
 
 	return (
 		<div className="page">

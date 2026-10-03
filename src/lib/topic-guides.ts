@@ -591,7 +591,13 @@ const TRACK_SOURCES: Record<TrackId, TopicGuide> = {
 };
 
 export function trackSourceGuide(trackId: TrackId): TopicGuide {
-	return TRACK_SOURCES[trackId];
+	return (
+		TRACK_SOURCES[trackId] ?? {
+			blurb:
+				'Custom field for this workspace. Use the roadmap checklist below — there is no built-in source list for this field yet.',
+			links: [],
+		}
+	);
 }
 
 export function topicGuide(trackId: TrackId, section: string): TopicGuide | undefined {

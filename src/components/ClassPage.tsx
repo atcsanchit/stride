@@ -8,8 +8,8 @@ import { TaskRow } from './TaskRow';
 import { TopicGuideCard } from './TopicGuideCard';
 
 export function ClassPage({ trackId, section }: { trackId: TrackId; section: string }) {
-	const { items, openTrack } = useStride();
-	const meta = trackMeta(trackId);
+	const { items, openTrack, settings } = useStride();
+	const meta = trackMeta(trackId, settings);
 	const lessons = items
 		.filter((item) => item.trackId === trackId && item.section === section)
 		.sort((a, b) => a.order - b.order);

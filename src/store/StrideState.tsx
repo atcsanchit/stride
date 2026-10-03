@@ -795,6 +795,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 					dailyTargets: { ...nextSettings.dailyTargets, [id]: nextSettings.dailyTargets[id] ?? 1 },
 				};
 				trackId = id;
+				settingsRef.current = nextSettings;
 				setSettings(nextSettings);
 				await saveSettings(workspace.id, nextSettings);
 			} else if (!TRACK_IDS.includes(trackId) && !normalizeCustomFields(nextSettings.customFields).some((field) => field.id === trackId)) {
