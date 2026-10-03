@@ -13,10 +13,13 @@ export function TopicGuideCard({
 	title = 'About this topic',
 	accent,
 }: {
-	guide: TopicGuide;
+	guide?: TopicGuide | null;
 	title?: string;
 	accent?: string;
 }) {
+	if (!guide) {
+		return null;
+	}
 	return (
 		<details className="topic-guide" open style={accent ? { ['--topic-accent' as string]: accent } : undefined}>
 			<summary className="eyebrow">{title}</summary>
