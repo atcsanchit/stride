@@ -241,19 +241,12 @@ export async function ensureProfileForGoogleEmail(
 	}
 	const now = Date.now();
 	const local = await loadProfilesFromIdb();
-	const tagged = local.find((row) => row.googleEmail === key);
-	if (tagged) {
-		const next = { ...tagged, lastSeenAt: now, googleEmail: key };
-		await saveProfile(next);
-		return next;
-	}
-
-	for (const id of remoteUserIds) {
-		const found = local.find((row) => row.id === id);
-		if (!found) {
-			continue;
-		}
-		const next = { ...found, googleEmail: key, lastSeenAt: now };
+	const candidates = local.filter(
+		(row) => (row.googleEmail ?? '').trim().toLowerCase() === key || remoteUserIds.includes(row.id),
+	);
+	if (candidates.length > 0) {
+		const best = await richestProfile(candidates);
+		const next = { ...best, lastSeenAt: now, googleEmail: key };
 		await saveProfile(next);
 		return next;
 	}
@@ -280,6 +273,41 @@ export async function ensureProfileForGoogleEmail(
 	await saveProfile(created);
 	await saveSettings(created.id, emptySettings('ai-engineering'));
 	return created;
+}
+
+async function progressScore(profileId: string): Promise<number> {
+	if (!(await databaseExists(progressDbName(profileId)))) {
+		return -1;
+	}
+	const snapshot = await loadAll(profileId);
+	return (
+		snapshot.tickets.length * 20 + snapshot.completions.length + snapshot.items.filter((item) => item.done).length
+	);
+}
+
+/** Several profiles can share one Gmail; open the one holding the most work, not the most recent. */
+async function richestProfile(profiles: Profile[]): Promise<Profile> {
+	let best = profiles[0];
+	let bestScore = -2;
+	for (const profile of profiles) {
+		const score = await progressScore(profile.id);
+		if (score > bestScore || (score === bestScore && profile.lastSeenAt > best.lastSeenAt)) {
+			best = profile;
+			bestScore = score;
+		}
+	}
+	return best;
+}
+
+/** Other local profiles linked to the same Gmail — their data belongs to the same person. */
+export async function siblingProfilesForEmail(email: string, exceptId: string): Promise<Profile[]> {
+	const key = email.trim().toLowerCase();
+	if (!key) {
+		return [];
+	}
+	return (await loadProfilesFromIdb()).filter(
+		(row) => row.id !== exceptId && (row.googleEmail ?? '').trim().toLowerCase() === key,
+	);
 }
 
 export async function pickProfileForName(name: string): Promise<Profile | undefined> {
