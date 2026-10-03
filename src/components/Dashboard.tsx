@@ -241,13 +241,13 @@ export function Dashboard() {
 			</div>
 
 			<section className="drop-hint">
-				<strong>Drop a .md roadmap</strong>
+				<strong>Add a course (.md)</strong>
 				<p className="muted" style={{ margin: '0.35rem 0 0.8rem' }}>
-					Use headings for modules and <code>- [ ]</code> checklists for skills. Completing those items is what marks a
-					day.
+					Drop or upload a checklist. You’ll name the course and fill summary / goal / exam details before it saves —
+					only in this workspace.
 				</p>
 				<button type="button" onClick={() => fileRef.current?.click()}>
-					Upload markdown
+					Upload course
 				</button>
 				<input
 					ref={fileRef}

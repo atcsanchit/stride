@@ -67,6 +67,14 @@ export type TrackMeta = {
 
 export type RoadmapOrigin = 'bundled' | 'dropped';
 
+/** User-editable course metadata (also written into markdown frontmatter on save). */
+export type CourseDetails = {
+	summary?: string;
+	details?: string;
+	goal?: string;
+	exam?: string;
+};
+
 export type Roadmap = {
 	id: string;
 	trackId: TrackId;
@@ -77,6 +85,29 @@ export type Roadmap = {
 	origin: RoadmapOrigin;
 	addedAt: number;
 	updatedAt: number;
+	summary?: string;
+	details?: string;
+	goal?: string;
+	exam?: string;
+	/** Extra frontmatter keys kept with the course. */
+	meta?: Record<string, string>;
+};
+
+/** Staged .md upload waiting for name/details before it is saved into the open workspace. */
+export type CourseUploadDraft = {
+	filename: string;
+	source: string;
+	hash: string;
+	itemCount: number;
+	title: string;
+	trackId: TrackId;
+	summary: string;
+	details: string;
+	goal: string;
+	exam: string;
+	meta: Record<string, string>;
+	/** Matching course already in this workspace (same file), if any. */
+	existingId?: string;
 };
 
 export type RoadmapItem = {

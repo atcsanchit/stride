@@ -51,7 +51,7 @@ import {
 import { createId, hashText } from '../lib/id';
 import { nameKey } from '../lib/identity';
 import { mergeItems, reconcileItemsWithCompletions } from '../lib/merge';
-import { parseMarkdownRoadmap } from '../lib/parse-roadmap';
+import { parseMarkdownRoadmap, writeCourseFrontmatter } from '../lib/parse-roadmap';
 import { readRecallDraft, writeRecallDraft } from '../lib/recall';
 import { applyGrade, prettyInterval, seedReviewCard, syncReviewCards } from '../lib/revise';
 import { clearSession, readSession, rememberPinUnlock, restoreView, writeSession, writeView } from '../lib/session';
@@ -91,6 +91,7 @@ import type {
 	ChoreDomain,
 	CoachNote,
 	Completion,
+	CourseUploadDraft,
 	Drop,
 	Priority,
 	Profile,
@@ -209,6 +210,19 @@ interface StrideContextValue {
 	removeTicket: (id: string) => Promise<void>;
 	importMarkdown: (filename: string, source: string, origin?: RoadmapOrigin) => Promise<void>;
 	importFiles: (files: FileList | File[]) => Promise<void>;
+	pendingCourseUpload: CourseUploadDraft | null;
+	confirmCourseUpload: (
+		details: {
+			title: string;
+			trackId: TrackId;
+			summary: string;
+			details: string;
+			goal: string;
+			exam: string;
+			mode: 'add' | 'replace';
+		},
+	) => Promise<void>;
+	cancelCourseUpload: () => void;
 	removeRoadmap: (id: string) => Promise<void>;
 	createProfile: (input: { name: string; pin?: string }) => Promise<void>;
 	signIn: (profileId: string, pin?: string) => Promise<void>;
@@ -270,10 +284,12 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const [reviews, setReviews] = useState<ReviewCard[]>([]);
 	const [pendingItemId, setPendingItemId] = useState<string | null>(null);
 	const [pendingTicketId, setPendingTicketId] = useState('');
+	const [courseUploadQueue, setCourseUploadQueue] = useState<CourseUploadDraft[]>([]);
 	const [settings, setSettings] = useState<Settings>(emptySettings());
 	const [toasts, setToasts] = useState<ToastMessage[]>([]);
 	const [dragging, setDragging] = useState(false);
 	const [drive, setDrive] = useState<DriveStatus>(getDriveStatus);
+	const pendingCourseUpload = courseUploadQueue[0] ?? null;
 
 	const profileRef = useRef(profile);
 	profileRef.current = profile;
@@ -551,6 +567,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			setSessions(nextSessions);
 			setPendingItemId(null);
 			setPendingTicketId('');
+			setCourseUploadQueue([]);
 			setSettings(seeded.settings);
 			setView(restoreView(seeded.settings));
 			setPhase(needsCourses ? 'courses' : 'app');
@@ -613,48 +630,172 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		});
 	}, [enterWorkspace]);
 
+	const revealImportedTrack = useCallback(
+		async (trackId: TrackId) => {
+			const current = settingsRef.current;
+			const enabled = enabledTrackIds(current);
+			const needsEnable = !enabled.includes(trackId);
+			const next = needsEnable
+				? withEnabledTracks(current, enabled.length > 0 ? [...enabled, trackId] : [trackId])
+				: { ...current, activeTrack: trackId };
+			const withActive = { ...next, activeTrack: trackId };
+			if (
+				needsEnable ||
+				current.activeTrack !== trackId ||
+				current.enabledTracks.join() !== withActive.enabledTracks.join()
+			) {
+				setSettings(withActive);
+				await saveSettings(requireProfile().id, withActive);
+			}
+			setView({ name: 'track', trackId });
+		},
+		[requireProfile],
+	);
+
 	const importMarkdown = useCallback(
 		async (filename: string, source: string, origin: RoadmapOrigin = 'dropped') => {
 			const hash = await hashText(source);
-			const fallback = settingsRef.current.activeTrack;
+			const fallback = settingsRef.current.activeTrack || settingsRef.current.focusTrack || 'ai-engineering';
 			const parsed = parseMarkdownRoadmap(source, filename, fallback);
 			const currentMaps = roadmapsRef.current;
-			const existing =
-				origin === 'bundled'
-					? currentMaps.find((entry) => entry.id === bundledId(filename))
-					: currentMaps.find(
-							(entry) =>
-								entry.origin === 'dropped' &&
-								entry.filename.toLowerCase() === filename.toLowerCase() &&
-								entry.trackId === parsed.trackId,
-						) ?? currentMaps.find((entry) => entry.hash === hash);
 
-			if (existing && existing.hash === hash) {
+			if (origin === 'bundled') {
+				const existing = currentMaps.find((entry) => entry.id === bundledId(filename));
+				if (existing && existing.hash === hash) {
+					return;
+				}
+				const now = Date.now();
+				const roadmap: Roadmap = existing
+					? {
+							...existing,
+							title: parsed.title,
+							trackId: parsed.trackId,
+							source,
+							hash,
+							updatedAt: now,
+							summary: parsed.summary || existing.summary,
+							details: parsed.details || existing.details,
+							goal: parsed.goal || existing.goal,
+							exam: parsed.exam || existing.exam,
+							meta: parsed.meta || existing.meta,
+						}
+					: {
+							id: bundledId(filename),
+							trackId: parsed.trackId,
+							title: parsed.title,
+							filename,
+							source,
+							hash,
+							origin,
+							addedAt: now,
+							updatedAt: now,
+							summary: parsed.summary || undefined,
+							details: parsed.details || undefined,
+							goal: parsed.goal || undefined,
+							exam: parsed.exam || undefined,
+							meta: Object.keys(parsed.meta).length > 0 ? parsed.meta : undefined,
+						};
+				const merged = mergeItems(roadmap, parsed.items, itemsRef.current);
+				await persistRoadmap(roadmap, merged);
 				return;
 			}
 
-			const now = Date.now();
-			const roadmap: Roadmap = existing
-				? { ...existing, title: parsed.title, trackId: parsed.trackId, source, hash, updatedAt: now }
-				: {
-						id: origin === 'bundled' ? bundledId(filename) : createId(),
-						trackId: parsed.trackId,
-						title: parsed.title,
-						filename,
-						source,
-						hash,
-						origin,
-						addedAt: now,
-						updatedAt: now,
-					};
+			// Dropped courses: stage a draft so the user names it and fills metadata.
+			// Scoped to the open workspace only — other workspaces are untouched.
+			const existing = currentMaps.find(
+				(entry) =>
+					entry.origin === 'dropped' &&
+					(entry.filename.toLowerCase() === filename.toLowerCase() || entry.hash === hash),
+			);
+			const draft: CourseUploadDraft = {
+				filename,
+				source,
+				hash,
+				itemCount: parsed.items.length,
+				title: parsed.title,
+				trackId: parsed.trackId,
+				summary: parsed.summary || existing?.summary || '',
+				details: parsed.details || existing?.details || '',
+				goal: parsed.goal || existing?.goal || '',
+				exam: parsed.exam || existing?.exam || '',
+				meta: { ...(existing?.meta ?? {}), ...parsed.meta },
+				existingId: existing?.id,
+			};
+			setCourseUploadQueue((queue) => [...queue, draft]);
+		},
+		[persistRoadmap],
+	);
 
+	const cancelCourseUpload = useCallback(() => {
+		setCourseUploadQueue((queue) => queue.slice(1));
+	}, []);
+
+	const confirmCourseUpload = useCallback(
+		async (details: {
+			title: string;
+			trackId: TrackId;
+			summary: string;
+			details: string;
+			goal: string;
+			exam: string;
+			mode: 'add' | 'replace';
+		}) => {
+			const draft = courseUploadQueue[0];
+			const workspace = requireProfile();
+			if (!draft) {
+				return;
+			}
+			const title = details.title.trim();
+			if (!title) {
+				throw new Error('Course name is required.');
+			}
+			if (draft.itemCount === 0) {
+				throw new Error('This markdown has no checklist items (- [ ]). Add some first.');
+			}
+
+			const source = writeCourseFrontmatter(draft.source, {
+				title,
+				trackId: details.trackId,
+				summary: details.summary,
+				details: details.details,
+				goal: details.goal,
+				exam: details.exam,
+				meta: draft.meta,
+			});
+			const hash = await hashText(source);
+			const parsed = parseMarkdownRoadmap(source, draft.filename, details.trackId);
+			const now = Date.now();
+			const replace = details.mode === 'replace' && draft.existingId;
+			const existing = replace
+				? roadmapsRef.current.find((entry) => entry.id === draft.existingId)
+				: undefined;
+			const roadmap: Roadmap = {
+				id: existing?.id ?? createId(),
+				trackId: details.trackId,
+				title,
+				filename: draft.filename,
+				source,
+				hash,
+				origin: 'dropped',
+				addedAt: existing?.addedAt ?? now,
+				updatedAt: now,
+				summary: details.summary.trim() || undefined,
+				details: details.details.trim() || undefined,
+				goal: details.goal.trim() || undefined,
+				exam: details.exam.trim() || undefined,
+				meta: Object.keys(draft.meta).length > 0 ? draft.meta : undefined,
+			};
 			const merged = mergeItems(roadmap, parsed.items, itemsRef.current);
 			await persistRoadmap(roadmap, merged);
-			if (origin === 'dropped') {
-				pushToast('Roadmap loaded', `${parsed.title} → ${TRACKS.find((track) => track.id === parsed.trackId)?.label}`);
-			}
+			await revealImportedTrack(details.trackId);
+			setCourseUploadQueue((queue) => queue.slice(1));
+			const trackLabel = TRACKS.find((track) => track.id === details.trackId)?.label ?? details.trackId;
+			pushToast(
+				replace ? 'Course updated' : 'Course added',
+				`“${title}” (${parsed.items.length} items) saved in workspace ${workspace.name} → ${trackLabel}. Sync Drive to keep it.`,
+			);
 		},
-		[persistRoadmap, pushToast],
+		[courseUploadQueue, persistRoadmap, pushToast, requireProfile, revealImportedTrack],
 	);
 
 	const stats = useMemo(
@@ -1487,8 +1628,20 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				pushToast('Need a .md file', 'Roadmaps are markdown. Drop a .md with headings and a checklist.');
 				return;
 			}
-			for (const file of markdown) {
-				await importMarkdown(file.name, await file.text(), 'dropped');
+			try {
+				for (const file of markdown) {
+					await importMarkdown(file.name, await file.text(), 'dropped');
+				}
+				pushToast(
+					markdown.length === 1 ? 'Name this course' : `${markdown.length} courses ready`,
+					'Fill in the course name and details. It saves only in this workspace.',
+				);
+			} catch (error) {
+				console.error(error);
+				pushToast(
+					'Import failed',
+					error instanceof Error ? error.message : 'Could not load that markdown roadmap.',
+				);
 			}
 		},
 		[importMarkdown, pushToast],
@@ -1725,6 +1878,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		setReviews(blank.reviews);
 		setPendingItemId(null);
 		setPendingTicketId('');
+		setCourseUploadQueue([]);
 		setSettings(blank.settings);
 		setView(blank.view);
 		setPhase('gate');
@@ -1984,6 +2138,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		removeTicket,
 		importMarkdown,
 		importFiles,
+		pendingCourseUpload,
+		confirmCourseUpload,
+		cancelCourseUpload,
 		removeRoadmap,
 		createProfile,
 		signIn,
