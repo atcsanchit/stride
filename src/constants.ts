@@ -1,4 +1,4 @@
-import type { Settings, TrackId, TrackMeta, Priority, Score, TicketStatus } from './types';
+import type { CustomField, Settings, TrackId, TrackMeta, Priority, Score, TicketStatus } from './types';
 
 export const TRACKS: TrackMeta[] = [
 	{
@@ -31,6 +31,7 @@ export const TRACKS: TrackMeta[] = [
 ];
 
 export const TRACK_IDS: TrackId[] = TRACKS.map((track) => track.id);
+export const BUILTIN_TRACK_IDS = TRACK_IDS;
 
 export const DEFAULT_TARGETS: Record<TrackId, number> = {
 	dsa: 3,
@@ -45,26 +46,92 @@ export const USERS_INDEX_KEY = 'stride-personal-users';
 export const ACCOUNTS_DB = 'stride-personal-accounts';
 export const LEGACY_PROGRESS_DB = 'stride-tracker';
 
-export function sanitizeEnabledTracks(ids: readonly string[] | undefined | null): TrackId[] {
-	const seen = new Set<TrackId>();
-	const next: TrackId[] = [];
-	for (const id of ids ?? []) {
-		if (!TRACK_IDS.includes(id as TrackId) || seen.has(id as TrackId)) {
+const CUSTOM_ACCENTS = ['var(--manage)', 'var(--exec)', 'var(--ai)', 'var(--design)', 'var(--dsa)'] as const;
+
+export function slugifyFieldLabel(label: string): string {
+	return label
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-+|-+$/g, '')
+		.slice(0, 48) || 'field';
+}
+
+export function customFieldId(label: string, existing: readonly CustomField[] = []): TrackId {
+	const base = `field-${slugifyFieldLabel(label)}`;
+	if (!existing.some((field) => field.id === base) && !TRACK_IDS.includes(base)) {
+		return base;
+	}
+	let n = 2;
+	while (existing.some((field) => field.id === `${base}-${n}`) || TRACK_IDS.includes(`${base}-${n}`)) {
+		n += 1;
+	}
+	return `${base}-${n}`;
+}
+
+export function normalizeCustomFields(value: CustomField[] | undefined | null): CustomField[] {
+	const seen = new Set<string>();
+	const next: CustomField[] = [];
+	for (const row of value ?? []) {
+		const label = row?.label?.trim();
+		if (!label) {
 			continue;
 		}
-		seen.add(id as TrackId);
-		next.push(id as TrackId);
+		const id = (row.id?.trim() || customFieldId(label, next)).toLowerCase();
+		if (TRACK_IDS.includes(id) || seen.has(id)) {
+			continue;
+		}
+		seen.add(id);
+		next.push({
+			id,
+			label,
+			blurb: row.blurb?.trim() || undefined,
+		});
 	}
 	return next;
 }
 
-export function enabledTrackIds(settings: Pick<Settings, 'enabledTracks'>): TrackId[] {
-	return sanitizeEnabledTracks(settings.enabledTracks);
+function customAsTrackMeta(field: CustomField, index: number): TrackMeta {
+	const short = field.label.length > 12 ? field.label.slice(0, 10).trim() + '…' : field.label;
+	return {
+		id: field.id,
+		label: field.label,
+		short,
+		blurb: field.blurb || 'Custom field for this workspace.',
+		unit: 'item',
+		unitPlural: 'items',
+		accent: CUSTOM_ACCENTS[index % CUSTOM_ACCENTS.length],
+	};
 }
 
-export function isTrackEnabled(settings: Pick<Settings, 'enabledTracks'>, trackId: TrackId): boolean {
-	const enabled = enabledTrackIds(settings);
-	return enabled.includes(trackId);
+export function listTrackMeta(settings?: Pick<Settings, 'customFields'> | null): TrackMeta[] {
+	const custom = normalizeCustomFields(settings?.customFields);
+	return [...TRACKS, ...custom.map(customAsTrackMeta)];
+}
+
+export function sanitizeEnabledTracks(
+	ids: readonly string[] | undefined | null,
+	customFields?: CustomField[] | null,
+): TrackId[] {
+	const allowed = new Set<TrackId>([...TRACK_IDS, ...normalizeCustomFields(customFields).map((field) => field.id)]);
+	const seen = new Set<TrackId>();
+	const next: TrackId[] = [];
+	for (const id of ids ?? []) {
+		if (!allowed.has(id) || seen.has(id)) {
+			continue;
+		}
+		seen.add(id);
+		next.push(id);
+	}
+	return next;
+}
+
+export function enabledTrackIds(settings: Pick<Settings, 'enabledTracks' | 'customFields'>): TrackId[] {
+	return sanitizeEnabledTracks(settings.enabledTracks, settings.customFields);
+}
+
+export function isTrackEnabled(settings: Pick<Settings, 'enabledTracks' | 'customFields'>, trackId: TrackId): boolean {
+	return enabledTrackIds(settings).includes(trackId);
 }
 
 export function emptySettings(focusTrack: TrackId = 'ai-engineering'): Settings {
@@ -73,6 +140,7 @@ export function emptySettings(focusTrack: TrackId = 'ai-engineering'): Settings 
 		dailyTargets: { ...DEFAULT_TARGETS },
 		focusTrack,
 		enabledTracks: [],
+		customFields: [],
 	};
 }
 
@@ -84,12 +152,21 @@ export function profileLabel(profile: { name: string; displayName?: string }): s
 	return profile.displayName?.trim() || profile.name;
 }
 
-export function trackMeta(id: TrackId): TrackMeta {
-	const found = TRACKS.find((track) => track.id === id);
-	if (!found) {
-		throw new Error(`Unknown track: ${id}`);
+export function trackMeta(id: TrackId, settings?: Pick<Settings, 'customFields'> | null): TrackMeta {
+	const found = listTrackMeta(settings).find((track) => track.id === id);
+	if (found) {
+		return found;
 	}
-	return found;
+	const label = id.startsWith('field-') ? id.replace(/^field-/, '').replace(/-/g, ' ') : id;
+	return {
+		id,
+		label: label.replace(/\b\w/g, (ch) => ch.toUpperCase()) || id,
+		short: label.slice(0, 12) || id,
+		blurb: 'Custom field for this workspace.',
+		unit: 'item',
+		unitPlural: 'items',
+		accent: 'var(--manage)',
+	};
 }
 
 export const CHORE_TAGS = [

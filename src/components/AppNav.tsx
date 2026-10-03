@@ -1,4 +1,4 @@
-import { TRACKS, enabledTrackIds } from '../constants';
+import { enabledTrackIds, listTrackMeta } from '../constants';
 import type { View } from '../types';
 import { useStride } from '../store/StrideState';
 
@@ -35,7 +35,7 @@ export function AppNav({
 	layout?: 'row' | 'side';
 }) {
 	const { openHome, openTrack, openLab, openSprint, openChores, openRevise, openSettings, settings } = useStride();
-	const courses = TRACKS.filter((track) => enabledTrackIds(settings).includes(track.id));
+	const courses = listTrackMeta(settings).filter((track) => enabledTrackIds(settings).includes(track.id));
 	return (
 		<nav className={layout === 'side' ? 'side-nav' : 'nav'} aria-label="Main">
 			{layout === 'side' ? <p className="side-nav-label">Workspace</p> : null}

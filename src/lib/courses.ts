@@ -13,7 +13,7 @@ export function hasOwnProgress(snapshot: Pick<ProgressSnapshot, 'tickets' | 'com
 }
 
 export function withEnabledTracks(settings: Settings, tracks: TrackId[]): Settings {
-	const enabledTracks = sanitizeEnabledTracks(tracks);
+	const enabledTracks = sanitizeEnabledTracks(tracks, settings.customFields);
 	if (enabledTracks.length === 0) {
 		throw new Error('Pick at least one course.');
 	}
@@ -23,8 +23,9 @@ export function withEnabledTracks(settings: Settings, tracks: TrackId[]): Settin
 }
 
 export function grandfatherEnabledTracks(settings: Settings): Settings {
-	if (sanitizeEnabledTracks(settings.enabledTracks).length > 0) {
-		return { ...settings, enabledTracks: sanitizeEnabledTracks(settings.enabledTracks) };
+	const enabled = sanitizeEnabledTracks(settings.enabledTracks, settings.customFields);
+	if (enabled.length > 0) {
+		return { ...settings, enabledTracks: enabled };
 	}
 	return withEnabledTracks(settings, TRACK_IDS);
 }
