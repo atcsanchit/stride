@@ -9,10 +9,15 @@ const TRACK_HINTS: Array<{ id: TrackId; needles: string[] }> = [
 
 const RESERVED_META = new Set(['title', 'track', 'summary', 'details', 'goal', 'exam', 'description']);
 
-export function inferTrack(filename: string, meta: Record<string, string>, fallback: TrackId): TrackId {
+export function inferTrack(
+	filename: string,
+	meta: Record<string, string>,
+	fallback: TrackId,
+	knownIds: readonly TrackId[] = TRACK_IDS,
+): TrackId {
 	const explicit = (meta.track ?? '').trim().toLowerCase().replace(/[_\s]+/g, '-');
-	if (TRACK_IDS.includes(explicit as TrackId)) {
-		return explicit as TrackId;
+	if (knownIds.includes(explicit)) {
+		return explicit;
 	}
 	if (explicit === 'algorithms' || explicit === 'leetcode') {
 		return 'dsa';
@@ -22,6 +27,12 @@ export function inferTrack(filename: string, meta: Record<string, string>, fallb
 	}
 	if (explicit === 'ai' || explicit === 'ml' || explicit === 'genai') {
 		return 'ai-engineering';
+	}
+	if (explicit.startsWith('field-') || explicit === 'atc' || explicit.includes('atc')) {
+		const match = knownIds.find((id) => id === explicit || id === `field-${explicit}` || id.endsWith(`-${explicit}`));
+		if (match) {
+			return match;
+		}
 	}
 
 	const blob = `${filename} ${meta.title ?? ''}`.toLowerCase();
@@ -135,9 +146,14 @@ function listItem(line: string): { title: string; done: boolean } | null {
 	};
 }
 
-export function parseMarkdownRoadmap(markdown: string, filename: string, fallback: TrackId) {
+export function parseMarkdownRoadmap(
+	markdown: string,
+	filename: string,
+	fallback: TrackId,
+	knownIds: readonly TrackId[] = TRACK_IDS,
+) {
 	const { meta, body } = parseFrontmatter(markdown);
-	const trackId = inferTrack(filename, meta, fallback);
+	const trackId = inferTrack(filename, meta, fallback, knownIds);
 	const details = courseDetailsFromMeta(meta);
 	let title = meta.title?.trim() || '';
 	let section = 'General';

@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react';
-import { TRACKS, firstName, profileLabel } from '../constants';
+import { useEffect, useMemo, useState } from 'react';
+import { firstName, listTrackMeta, profileLabel } from '../constants';
 import { useStride } from '../store/StrideState';
 import type { TrackId } from '../types';
 
 export function CourseUploadModal() {
-	const { pendingCourseUpload, confirmCourseUpload, cancelCourseUpload, profile } = useStride();
+	const { pendingCourseUpload, confirmCourseUpload, cancelCourseUpload, profile, settings } = useStride();
 	const draft = pendingCourseUpload;
+	const fields = useMemo(() => listTrackMeta(settings), [settings]);
 	const [title, setTitle] = useState('');
 	const [trackId, setTrackId] = useState<TrackId>('ai-engineering');
+	const [addingField, setAddingField] = useState(false);
+	const [newFieldLabel, setNewFieldLabel] = useState('');
+	const [newFieldBlurb, setNewFieldBlurb] = useState('');
 	const [summary, setSummary] = useState('');
 	const [details, setDetails] = useState('');
 	const [goal, setGoal] = useState('');
@@ -21,7 +25,11 @@ export function CourseUploadModal() {
 			return;
 		}
 		setTitle(draft.title);
-		setTrackId(draft.trackId);
+		const known = listTrackMeta(settings).some((track) => track.id === draft.trackId);
+		setTrackId(known ? draft.trackId : 'ai-engineering');
+		setAddingField(false);
+		setNewFieldLabel('');
+		setNewFieldBlurb('');
 		setSummary(draft.summary);
 		setDetails(draft.details);
 		setGoal(draft.goal);
@@ -29,7 +37,7 @@ export function CourseUploadModal() {
 		setMode(draft.existingId ? 'replace' : 'add');
 		setError('');
 		setBusy(false);
-	}, [draft]);
+	}, [draft, settings]);
 
 	if (!draft) {
 		return null;
@@ -37,6 +45,7 @@ export function CourseUploadModal() {
 
 	const workspaceName = profile ? firstName(profileLabel(profile)) : 'this workspace';
 	const extraKeys = Object.keys(draft.meta);
+	const canSubmit = title.trim() && (!addingField || newFieldLabel.trim());
 
 	return (
 		<div className="modal-root" role="dialog" aria-labelledby="course-upload-title">
@@ -46,14 +55,18 @@ export function CourseUploadModal() {
 					event.preventDefault();
 					setBusy(true);
 					setError('');
+					const newField = addingField
+						? { label: newFieldLabel.trim(), blurb: newFieldBlurb.trim() || undefined }
+						: undefined;
 					void confirmCourseUpload({
 						title,
-						trackId,
+						trackId: addingField ? trackId : trackId,
 						summary,
 						details,
 						goal,
 						exam,
 						mode: draft.existingId ? mode : 'add',
+						newField,
 					})
 						.catch((caught: unknown) => {
 							setError(caught instanceof Error ? caught.message : 'Could not save course.');
@@ -64,8 +77,7 @@ export function CourseUploadModal() {
 				<p className="eyebrow">New course · {workspaceName} only</p>
 				<h2 id="course-upload-title">Add course details</h2>
 				<p className="muted course-upload-lede">
-					Name this course and fill the metadata before it is saved. Other workspaces keep their own courses —
-					nothing here is shared across them.
+					Name this course and pick or create a field. Fields and courses stay in this workspace only.
 				</p>
 
 				<div className="course-upload-stats">
@@ -90,16 +102,58 @@ export function CourseUploadModal() {
 					/>
 				</label>
 
-				<label className="field">
-					Field
-					<select value={trackId} onChange={(event) => setTrackId(event.target.value as TrackId)}>
-						{TRACKS.map((track) => (
-							<option key={track.id} value={track.id}>
-								{track.label}
-							</option>
-						))}
-					</select>
-				</label>
+				<div className="course-upload-field-block">
+					<div className="course-upload-field-head">
+						<label className="field" style={{ margin: 0, flex: 1 }}>
+							Field
+							{addingField ? (
+								<input
+									value={newFieldLabel}
+									onChange={(event) => setNewFieldLabel(event.target.value)}
+									placeholder="e.g. ATC / Exam prep"
+									required
+								/>
+							) : (
+								<select value={trackId} onChange={(event) => setTrackId(event.target.value as TrackId)}>
+									{fields.map((track) => (
+										<option key={track.id} value={track.id}>
+											{track.label}
+										</option>
+									))}
+								</select>
+							)}
+						</label>
+						<button
+							type="button"
+							className="ghost course-upload-add-field"
+							disabled={busy}
+							onClick={() => {
+								setAddingField((value) => !value);
+								setError('');
+								if (!addingField) {
+									setNewFieldLabel('');
+									setNewFieldBlurb('');
+								}
+							}}
+						>
+							{addingField ? 'Use existing' : 'Add field'}
+						</button>
+					</div>
+					{addingField ? (
+						<label className="field">
+							Field note <span className="gate-optional">optional</span>
+							<input
+								value={newFieldBlurb}
+								onChange={(event) => setNewFieldBlurb(event.target.value)}
+								placeholder="Short description of this field"
+							/>
+						</label>
+					) : (
+						<p className="muted course-upload-field-hint">
+							DSA / Design / AI Eng are built-in. Use Add field for ATC or anything else.
+						</p>
+					)}
+				</div>
 
 				<label className="field">
 					Summary
@@ -175,7 +229,7 @@ export function CourseUploadModal() {
 					<button type="button" disabled={busy} onClick={cancelCourseUpload}>
 						Cancel
 					</button>
-					<button className="primary" type="submit" disabled={busy || !title.trim()}>
+					<button className="primary" type="submit" disabled={busy || !canSubmit}>
 						{busy ? 'Saving…' : mode === 'replace' && draft.existingId ? 'Update course' : 'Add course'}
 					</button>
 				</div>

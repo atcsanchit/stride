@@ -1,5 +1,6 @@
-import { TRACKS } from '../constants';
+import { listTrackMeta } from '../constants';
 import type { TrackId } from '../types';
+import { useStride } from '../store/StrideState';
 
 export function CoursePicker({
 	selected,
@@ -8,9 +9,11 @@ export function CoursePicker({
 	selected: TrackId[];
 	onToggle: (trackId: TrackId) => void;
 }) {
+	const { settings } = useStride();
+	const tracks = listTrackMeta(settings);
 	return (
 		<div className="course-grid">
-			{TRACKS.map((track) => {
+			{tracks.map((track) => {
 				const on = selected.includes(track.id);
 				return (
 					<button

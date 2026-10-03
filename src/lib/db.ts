@@ -1,4 +1,10 @@
-import { emptySettings, LEGACY_PROGRESS_DB, sanitizeEnabledTracks } from '../constants';
+import {
+	emptySettings,
+	LEGACY_PROGRESS_DB,
+	normalizeCustomFields,
+	sanitizeEnabledTracks,
+	TRACK_IDS,
+} from '../constants';
 import type { Completion, Drop, ReviewCard, Roadmap, RoadmapItem, Settings, Sprint, Ticket, UserIdentity, WorkSession } from '../types';
 import { databaseExists, deleteDatabase, requestToPromise, transactionDone } from './idb';
 import {
@@ -168,12 +174,23 @@ function normalizeSettings(value: Settings | undefined): Settings {
 				.filter(Boolean),
 		),
 	].sort((a, b) => a.localeCompare(b));
+	const customFields = normalizeCustomFields(value?.customFields);
+	const enabledTracks = sanitizeEnabledTracks(value?.enabledTracks, customFields);
+	const activeTrack =
+		enabledTracks.includes(value?.activeTrack ?? '') || TRACK_IDS.includes(value?.activeTrack ?? '')
+			? (value?.activeTrack as string)
+			: fallback.activeTrack;
+	const focusTrack =
+		enabledTracks.includes(value?.focusTrack ?? '') || TRACK_IDS.includes(value?.focusTrack ?? '')
+			? (value?.focusTrack as string)
+			: fallback.focusTrack;
 	return {
-		activeTrack: value?.activeTrack ?? fallback.activeTrack,
+		activeTrack,
 		dailyTargets: { ...fallback.dailyTargets, ...value?.dailyTargets },
-		focusTrack: value?.focusTrack ?? fallback.focusTrack,
-		enabledTracks: sanitizeEnabledTracks(value?.enabledTracks),
+		focusTrack,
+		enabledTracks,
 		courseRepos: value?.courseRepos ? { ...value.courseRepos } : undefined,
+		customFields: customFields.length > 0 ? customFields : undefined,
 		choreClients: choreClients.length > 0 ? choreClients : undefined,
 	};
 }

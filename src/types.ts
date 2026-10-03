@@ -1,4 +1,14 @@
-export type TrackId = 'dsa' | 'system-design' | 'ai-engineering';
+/** Built-in fields (DSA / Design / AI Eng) or workspace-defined custom fields (`field-…`). */
+export type TrackId = string;
+
+export type BuiltinTrackId = 'dsa' | 'system-design' | 'ai-engineering';
+
+/** User-created course field, stored per workspace in settings. */
+export type CustomField = {
+	id: TrackId;
+	label: string;
+	blurb?: string;
+};
 
 export type View =
 	| { name: 'home' }
@@ -206,6 +216,8 @@ export type Settings = {
 	focusTrack: TrackId;
 	enabledTracks: TrackId[];
 	courseRepos?: Partial<Record<TrackId, string>>;
+	/** Extra fields beyond DSA / Design / AI Eng — scoped to this workspace. */
+	customFields?: CustomField[];
 	choreClients?: string[];
 };
 

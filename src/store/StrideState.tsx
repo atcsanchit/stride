@@ -8,7 +8,17 @@ import {
 	useState,
 	type ReactNode,
 } from 'react';
-import { emptySettings, enabledTrackIds, firstName, isTrackEnabled, TRACKS } from '../constants';
+import {
+	customFieldId,
+	emptySettings,
+	enabledTrackIds,
+	firstName,
+	isTrackEnabled,
+	listTrackMeta,
+	normalizeCustomFields,
+	trackMeta,
+	TRACK_IDS,
+} from '../constants';
 import {
 	deleteProfile as deleteProfileRecord,
 	assertUniqueUsername,
@@ -220,6 +230,8 @@ interface StrideContextValue {
 			goal: string;
 			exam: string;
 			mode: 'add' | 'replace';
+			/** Create a new workspace field (e.g. ATC) instead of using DSA / Design / AI Eng. */
+			newField?: { label: string; blurb?: string };
 		},
 	) => Promise<void>;
 	cancelCourseUpload: () => void;
@@ -656,7 +668,8 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		async (filename: string, source: string, origin: RoadmapOrigin = 'dropped') => {
 			const hash = await hashText(source);
 			const fallback = settingsRef.current.activeTrack || settingsRef.current.focusTrack || 'ai-engineering';
-			const parsed = parseMarkdownRoadmap(source, filename, fallback);
+			const knownIds = listTrackMeta(settingsRef.current).map((track) => track.id);
+			const parsed = parseMarkdownRoadmap(source, filename, fallback, knownIds);
 			const currentMaps = roadmapsRef.current;
 
 			if (origin === 'bundled') {
@@ -739,6 +752,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			goal: string;
 			exam: string;
 			mode: 'add' | 'replace';
+			newField?: { label: string; blurb?: string };
 		}) => {
 			const draft = courseUploadQueue[0];
 			const workspace = requireProfile();
@@ -753,9 +767,44 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				throw new Error('This markdown has no checklist items (- [ ]). Add some first.');
 			}
 
+			let trackId = details.trackId;
+			let nextSettings = settingsRef.current;
+			const newLabel = details.newField?.label?.trim();
+			if (newLabel) {
+				const existingFields = normalizeCustomFields(nextSettings.customFields);
+				const byLabel = existingFields.find(
+					(field) => field.label.toLowerCase() === newLabel.toLowerCase(),
+				);
+				const id = byLabel?.id ?? customFieldId(newLabel, existingFields);
+				const customFields = byLabel
+					? existingFields.map((field) =>
+							field.id === id
+								? {
+										...field,
+										blurb: details.newField?.blurb?.trim() || field.blurb,
+									}
+								: field,
+						)
+					: normalizeCustomFields([
+							...existingFields,
+							{ id, label: newLabel, blurb: details.newField?.blurb?.trim() || undefined },
+						]);
+				nextSettings = {
+					...nextSettings,
+					customFields,
+					dailyTargets: { ...nextSettings.dailyTargets, [id]: nextSettings.dailyTargets[id] ?? 1 },
+				};
+				trackId = id;
+				setSettings(nextSettings);
+				await saveSettings(workspace.id, nextSettings);
+			} else if (!TRACK_IDS.includes(trackId) && !normalizeCustomFields(nextSettings.customFields).some((field) => field.id === trackId)) {
+				throw new Error('Pick a field, or add a new one.');
+			}
+
+			const knownIds = listTrackMeta(nextSettings).map((track) => track.id);
 			const source = writeCourseFrontmatter(draft.source, {
 				title,
-				trackId: details.trackId,
+				trackId,
 				summary: details.summary,
 				details: details.details,
 				goal: details.goal,
@@ -763,7 +812,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				meta: draft.meta,
 			});
 			const hash = await hashText(source);
-			const parsed = parseMarkdownRoadmap(source, draft.filename, details.trackId);
+			const parsed = parseMarkdownRoadmap(source, draft.filename, trackId, knownIds);
 			const now = Date.now();
 			const replace = details.mode === 'replace' && draft.existingId;
 			const existing = replace
@@ -771,7 +820,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				: undefined;
 			const roadmap: Roadmap = {
 				id: existing?.id ?? createId(),
-				trackId: details.trackId,
+				trackId,
 				title,
 				filename: draft.filename,
 				source,
@@ -787,9 +836,9 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			};
 			const merged = mergeItems(roadmap, parsed.items, itemsRef.current);
 			await persistRoadmap(roadmap, merged);
-			await revealImportedTrack(details.trackId);
+			await revealImportedTrack(trackId);
 			setCourseUploadQueue((queue) => queue.slice(1));
-			const trackLabel = TRACKS.find((track) => track.id === details.trackId)?.label ?? details.trackId;
+			const trackLabel = trackMeta(trackId, nextSettings).label;
 			pushToast(
 				replace ? 'Course updated' : 'Course added',
 				`“${title}” (${parsed.items.length} items) saved in workspace ${workspace.name} → ${trackLabel}. Sync Drive to keep it.`,
@@ -1714,7 +1763,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			setPhase((currentPhase) => (currentPhase === 'courses' ? 'app' : currentPhase));
 			pushToast(
 				'Courses saved',
-				next.enabledTracks.map((id) => TRACKS.find((track) => track.id === id)?.short ?? id).join(' · '),
+				next.enabledTracks.map((id) => trackMeta(id, next).short).join(' · '),
 			);
 		},
 		[pushToast, requireProfile],
