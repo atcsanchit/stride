@@ -25,7 +25,7 @@ export function TopicGuideCard({
 			<summary className="eyebrow">{title}</summary>
 			<p className="topic-blurb">{guide.blurb}</p>
 			{guide.pattern ? (
-				<p className="muted" style={{ marginTop: '0.45rem' }}>
+				<p className="muted" style={{ marginTop: '0.45rem', whiteSpace: 'pre-line' }}>
 					Pattern: {guide.pattern}
 				</p>
 			) : null}
