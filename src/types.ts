@@ -1,7 +1,7 @@
 /** Built-in fields (DSA / Design / AI Eng) or workspace-defined custom fields (`field-…`). */
 export type TrackId = string;
 
-export type BuiltinTrackId = 'dsa' | 'system-design' | 'ai-engineering';
+export type BuiltinTrackId = 'dsa' | 'system-design' | 'ai-engineering' | 'atc';
 
 /** User-created course field, stored per workspace in settings. */
 export type CustomField = {

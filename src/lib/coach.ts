@@ -111,6 +111,7 @@ export function coachNote(stats: TrackStats[], completions: Completion[], name =
 		.find((track) => track.last7.every((day) => day.count === 0));
 	const dsa = stats.find((track) => track.trackId === 'dsa');
 	const ai = stats.find((track) => track.trackId === 'ai-engineering');
+	const atc = stats.find((track) => track.trackId === 'atc');
 	const first = name ? firstName(name) : '';
 
 	if (completions.length === 0) {
@@ -157,6 +158,18 @@ export function coachNote(stats: TrackStats[], completions: Completion[], name =
 				tone: 'rotate',
 				headline: 'DSA is moving. AI engineering is the job.',
 				body: `${first ? `${first}, you` : 'You'} are applying as an ML engineer. Keep the DSA floor, then spend one block on evals, agents, or a production write-up. That is the field on the resume.`,
+			};
+		}
+	}
+
+	if (dsa && atc && atc.total > 0) {
+		const weekDsa = dsa.last7.reduce((sum, day) => sum + day.count, 0);
+		const weekAtc = atc.last7.reduce((sum, day) => sum + day.count, 0);
+		if (weekDsa >= 8 && weekAtc === 0) {
+			return {
+				tone: 'rotate',
+				headline: 'DSA is moving. The ATC paper is the clock.',
+				body: `${first ? `${first}, the` : 'The'} AAI ATC notification lands on its own schedule and the registration window is ~30 days. Keep the DSA floor, then one timed ATC block today — a PYQ set or a sectional at the 60-second law, not re-reading notes.`,
 			};
 		}
 	}

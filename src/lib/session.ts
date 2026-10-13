@@ -66,7 +66,7 @@ function clearPinUnlocks(): void {
 }
 
 function isTrackId(value: unknown): value is TrackId {
-	return value === 'dsa' || value === 'system-design' || value === 'ai-engineering';
+	return value === 'dsa' || value === 'system-design' || value === 'ai-engineering' || value === 'atc';
 }
 
 export function readView(): View | null {
