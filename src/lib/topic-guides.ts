@@ -1,4 +1,5 @@
 import type { TrackId } from '../types';
+import { ATC_GUIDES, ATC_TRACK_SOURCE } from './topic-guides-atc';
 
 export type ResourceKind = 'problem' | 'read' | 'practice' | 'paper' | 'explainer' | 'docs';
 
@@ -591,6 +592,9 @@ const TRACK_SOURCES: Record<TrackId, TopicGuide> = {
 };
 
 export function trackSourceGuide(trackId: TrackId): TopicGuide {
+	if (trackId === 'atc') {
+		return ATC_TRACK_SOURCE;
+	}
 	return (
 		TRACK_SOURCES[trackId] ?? {
 			blurb:
@@ -601,5 +605,5 @@ export function trackSourceGuide(trackId: TrackId): TopicGuide {
 }
 
 export function topicGuide(trackId: TrackId, section: string): TopicGuide | undefined {
-	return GUIDES[keyOf(trackId, section)];
+	return GUIDES[keyOf(trackId, section)] ?? ATC_GUIDES[keyOf(trackId, section)];
 }
