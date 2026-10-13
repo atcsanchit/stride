@@ -2,9 +2,10 @@ import { TRACK_IDS, trackMeta } from '../constants';
 import type { CourseDetails, TrackId } from '../types';
 
 const TRACK_HINTS: Array<{ id: TrackId; needles: string[] }> = [
+	{ id: 'atc', needles: ['air-traffic', 'air traffic', 'aai', 'atc exam', 'atc prep', 'junior executive'] },
 	{ id: 'dsa', needles: ['dsa', 'leetcode', 'algorithm', 'neetcode', 'coding-interview'] },
 	{ id: 'system-design', needles: ['system-design', 'system_design', 'hld', 'lld', 'design'] },
-	{ id: 'ai-engineering', needles: ['ai-eng', 'ai_eng', 'ml-eng', 'llm', 'agent', 'genai', 'rag', 'atc', 'aai'] },
+	{ id: 'ai-engineering', needles: ['ai-eng', 'ai_eng', 'ml-eng', 'llm', 'agent', 'genai', 'rag'] },
 ];
 
 const RESERVED_META = new Set(['title', 'track', 'summary', 'details', 'goal', 'exam', 'description']);

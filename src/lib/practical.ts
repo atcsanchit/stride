@@ -1,7 +1,7 @@
 import type { RoadmapItem, Ticket, TrackId } from '../types';
 import { isChoreTicket, ticketTopics } from './ticket';
 
-export const PRACTICAL_TRACKS: TrackId[] = ['dsa', 'system-design', 'ai-engineering'];
+export const PRACTICAL_TRACKS: TrackId[] = ['dsa', 'system-design', 'ai-engineering', 'atc'];
 
 export type PracticalChallenge = {
 	section: string;
@@ -16,6 +16,7 @@ const SOURCE: Record<TrackId, string> = {
 	dsa: 'Erin Meryl — How to learn anything: produce the solution, do not reread it first',
 	'system-design': 'Erin Meryl — whiteboard first (impermanence), then apply like the interview',
 	'ai-engineering': 'Erin Meryl session ritual + Shirin Khosravi Jam / jam.with.ai production bar',
+	atc: 'Speed-first exam system — 60-second law, two passes, error-log buckets',
 };
 
 const FALLBACK: Record<TrackId, Omit<PracticalChallenge, 'section' | 'source'>> = {
@@ -34,6 +35,11 @@ const FALLBACK: Record<TrackId, Omit<PracticalChallenge, 'section' | 'source'>> 
 		test: 'A stranger can run it or argue with a number in the README.',
 		github: 'Push the artifact. Ticket stays open without a github.com link.',
 		requireGithub: true,
+	},
+	atc: {
+		build: 'One timed drill block: a PYQ chapter set at ≤45 s/Q or a 20-question mixed speed set at the 60-second law. Misses go to the error log with a bucket (concept / speed / silly / time-trap).',
+		test: 'You re-solve the set clean and can name the bucket for every miss. Sectional in budget: Part A ≥55/60 in 55 min, Part B ≥48/60 in 62 min.',
+		github: 'Optional: log the mock score and error buckets in a gist or notes file.',
 	},
 };
 

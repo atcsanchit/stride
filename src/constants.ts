@@ -28,6 +28,15 @@ export const TRACKS: TrackMeta[] = [
 		unitPlural: 'blocks',
 		accent: 'var(--ai)',
 	},
+	{
+		id: 'atc',
+		label: 'ATC Exam (AAI)',
+		short: 'ATC',
+		blurb: 'AAI JE (Air Traffic Control): 120 Q / 120 min CBT, no negative marking. Bank Layers 1+2 at speed, mocks to 110–115, watch the dashboard for the next Advt.',
+		unit: 'block',
+		unitPlural: 'blocks',
+		accent: 'var(--atc)',
+	},
 ];
 
 export const TRACK_IDS: TrackId[] = TRACKS.map((track) => track.id);
@@ -37,6 +46,7 @@ export const DEFAULT_TARGETS: Record<TrackId, number> = {
 	dsa: 3,
 	'system-design': 1,
 	'ai-engineering': 1,
+	atc: 2,
 };
 
 export const BACKUP_KIND = 'stride-personal-backup' as const;

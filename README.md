@@ -1,6 +1,6 @@
 # Stride
 
-Personal interview-prep tracker for **DSA**, **system design**, and **AI engineering**. Learning is production, not consumption: blurt first, apply the same day, write one sentence of what you learned.
+Personal interview-prep tracker for **DSA**, **system design**, **AI engineering**, and the **AAI ATC exam**. Learning is production, not consumption: blurt first, apply the same day, write one sentence of what you learned.
 
 Local: `http://localhost:5174`  
 Production: whatever origin you add to the OAuth client (example: `https://your-app.vercel.app`).
@@ -98,7 +98,7 @@ Project → Settings → Environment Variables:
 - **Lab** (localhost only) runs the Python on this laptop. See below.
 - **Export** JSON to a personal folder now and then. **Log out** when you walk away.
 
-Keep the daily floor small enough for a tired Tuesday (default: 3 DSA, 1 design, 1 AI block — only for courses you enabled).
+Keep the daily floor small enough for a tired Tuesday (default: 3 DSA, 1 design, 1 AI block, 2 ATC blocks — only for courses you enabled).
 
 Replace starter lists in `src/roadmaps/` with your own and restart.
 
@@ -131,7 +131,7 @@ title: My DSA list
 - Longest Substring Without Repeating Characters
 ```
 
-- `track` must be `dsa`, `system-design`, or `ai-engineering`. If omitted, the filename is used (`dsa.md`, `system-design.md`, `ai-engineering.md`).
+- `track` must be `dsa`, `system-design`, `ai-engineering`, or `atc`. If omitted, the filename is used (`dsa.md`, `system-design.md`, `ai-engineering.md`, `atc.md`).
 - `##` headings become skill modules with their own progress bars.
 - Checklist and bullet items become the course.
 - Re-dropping or editing a bundled file merges by title. Completed items stay completed.
