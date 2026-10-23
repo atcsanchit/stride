@@ -65,6 +65,11 @@ export function TicketRow({
 							PR
 						</span>
 					) : null}
+					{(ticket.linkedIds ?? []).length > 0 ? (
+						<span className="tag-chip ticket-links-flag" title={`Linked to: ${(ticket.linkedIds ?? []).length} ticket(s)`}>
+							⛓ {(ticket.linkedIds ?? []).length}
+						</span>
+					) : null}
 				</div>
 			</div>
 			<div className="ticket-row-actions">

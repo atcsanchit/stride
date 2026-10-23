@@ -212,7 +212,31 @@ export function normalizeTicket(raw: RawTicket): Ticket {
 			typeof (raw as { originalTitle?: unknown }).originalTitle === 'string'
 				? (raw as { originalTitle: string }).originalTitle
 				: undefined,
+		linkedIds: normalizeLinkedIds(raw.linkedIds, raw.id),
 	};
+}
+
+export function normalizeLinkedIds(value: unknown, selfId?: string): string[] | undefined {
+	if (!Array.isArray(value)) {
+		return undefined;
+	}
+	const ids = [
+		...new Set(
+			value.filter(
+				(entry): entry is string => typeof entry === 'string' && Boolean(entry) && entry !== selfId,
+			),
+		),
+	];
+	return ids.length ? ids : undefined;
+}
+
+export function withLinkedId(linkedIds: string[] | undefined, id: string): string[] {
+	return [...new Set([...(linkedIds ?? []), id])];
+}
+
+export function withoutLinkedId(linkedIds: string[] | undefined, id: string): string[] | undefined {
+	const next = (linkedIds ?? []).filter((entry) => entry !== id);
+	return next.length ? next : undefined;
 }
 
 export function ticketTopics(ticket: Ticket, items: RoadmapItem[]): RoadmapItem[] {

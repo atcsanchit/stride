@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { AppShell } from './components/AppShell';
+import { CanvasPage } from './components/CanvasPage';
 import { CompleteModal } from './components/CompleteModal';
 import { CourseUploadModal } from './components/CourseUploadModal';
 import { CourseSetup } from './components/CourseSetup';
@@ -90,6 +91,7 @@ export default function App() {
 				{view.name === 'lesson' ? <LessonPage itemId={view.itemId} /> : null}
 				{view.name === 'lab' ? <Lab /> : null}
 				{view.name === 'sprint' ? <SprintPage /> : null}
+				{view.name === 'canvas' ? <CanvasPage /> : null}
 				{view.name === 'chores' ? <ChoresPage /> : null}
 				{view.name === 'revise' ? <RevisePage /> : null}
 				{view.name === 'day' ? <DayLog date={view.date} /> : null}

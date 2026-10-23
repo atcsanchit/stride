@@ -9,6 +9,8 @@ export function activeNavFromView(view: View, lessonTrackId?: string): string {
 			return 'home';
 		case 'sprint':
 			return 'sprint';
+		case 'canvas':
+			return 'canvas';
 		case 'chores':
 			return 'chores';
 		case 'revise':
@@ -34,7 +36,7 @@ export function AppNav({
 	active: string;
 	layout?: 'row' | 'side';
 }) {
-	const { openHome, openTrack, openLab, openSprint, openChores, openRevise, openSettings, settings } = useStride();
+	const { openHome, openTrack, openLab, openSprint, openCanvas, openChores, openRevise, openSettings, settings } = useStride();
 	const courses = listTrackMeta(settings).filter((track) => enabledTrackIds(settings).includes(track.id));
 	return (
 		<nav className={layout === 'side' ? 'side-nav' : 'nav'} aria-label="Main">
@@ -44,6 +46,9 @@ export function AppNav({
 			</button>
 			<button className={active === 'sprint' ? 'nav-link is-active' : 'nav-link'} type="button" onClick={openSprint}>
 				Sprint
+			</button>
+			<button className={active === 'canvas' ? 'nav-link is-active' : 'nav-link'} type="button" onClick={openCanvas}>
+				Canvas
 			</button>
 			<button className={active === 'chores' ? 'nav-link is-active' : 'nav-link'} type="button" onClick={openChores}>
 				Chores

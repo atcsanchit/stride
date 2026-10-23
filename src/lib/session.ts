@@ -106,6 +106,7 @@ export function sanitizeView(value: unknown): View | null {
 		case 'home':
 		case 'lab':
 		case 'sprint':
+		case 'canvas':
 		case 'chores':
 		case 'settings':
 			return { name: view.name };
