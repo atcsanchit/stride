@@ -12,6 +12,7 @@ export type CustomField = {
 
 export type View =
 	| { name: 'home' }
+	| { name: 'canvas' }
 	| { name: 'track'; trackId: TrackId }
 	| { name: 'lab' }
 	| { name: 'sprint' }
@@ -208,6 +209,8 @@ export type Ticket = {
 	createdAt: number;
 	updatedAt?: number;
 	originalTitle?: string;
+	/** Ids of tickets this one is linked to (symmetric — both sides carry the id). */
+	linkedIds?: string[];
 };
 
 export type Settings = {

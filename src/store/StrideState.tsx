@@ -85,7 +85,7 @@ import { rememberedDriveEmail } from '../lib/google-auth';
 import { addDays, todayKey, weekEnd, weekStart } from '../lib/time';
 import { followingSprintRange, originalTicketTitle, previousSprintRange, sprintLabel, withSpiloverTitle } from '../lib/sprint';
 import { ticketNeedsPracticalEvidence } from '../lib/practical';
-import { isChoreTicket, ticketIsClosed } from '../lib/ticket';
+import { isChoreTicket, ticketIsClosed, withLinkedId, withoutLinkedId } from '../lib/ticket';
 import {
 	endSession,
 	isSessionPaused,
@@ -156,6 +156,7 @@ interface StrideContextValue {
 	openTrack: (trackId: TrackId) => void;
 	openLab: () => void;
 	openSprint: () => void;
+	openCanvas: () => void;
 	openChores: () => void;
 	openRevise: (itemId?: string) => void;
 	openClass: (trackId: TrackId, section: string) => void;
@@ -211,6 +212,8 @@ interface StrideContextValue {
 			priority?: Priority | null;
 		},
 	) => Promise<void>;
+	linkTickets: (aId: string, bId: string) => Promise<void>;
+	unlinkTickets: (aId: string, bId: string) => Promise<void>;
 	spillTicket: (id: string) => Promise<void>;
 	cloneTicket: (id: string) => Promise<Ticket | undefined>;
 	selectSprint: (id: string) => void;
@@ -255,6 +258,7 @@ interface StrideContextValue {
 	syncDriveNow: () => Promise<void>;
 	disconnectDrive: () => void;
 	dismissToast: (id: string) => void;
+	pushToast: (title: string, body: string) => void;
 	setDragging: (value: boolean) => void;
 }
 
@@ -1078,6 +1082,52 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}
 		},
 		[persistSession, persistSessions, persistTicket, requestComplete, requireProfile, startTask],
+	);
+
+	const linkTickets = useCallback(
+		async (aId: string, bId: string) => {
+			if (!aId || !bId || aId === bId) {
+				return;
+			}
+			const a = ticketsRef.current.find((entry) => entry.id === aId);
+			const b = ticketsRef.current.find((entry) => entry.id === bId);
+			if (!a || !b) {
+				return;
+			}
+			const now = Date.now();
+			const profileId = requireProfile().id;
+			await Promise.all([
+				persistTicket(profileId, { ...a, linkedIds: withLinkedId(a.linkedIds, bId), updatedAt: now }),
+				persistTicket(profileId, { ...b, linkedIds: withLinkedId(b.linkedIds, aId), updatedAt: now }),
+			]);
+		},
+		[persistTicket, requireProfile],
+	);
+
+	const unlinkTickets = useCallback(
+		async (aId: string, bId: string) => {
+			if (!aId || !bId) {
+				return;
+			}
+			const a = ticketsRef.current.find((entry) => entry.id === aId);
+			const b = ticketsRef.current.find((entry) => entry.id === bId);
+			const aChanged = a?.linkedIds?.includes(bId);
+			const bChanged = b?.linkedIds?.includes(aId);
+			if (!a && !b) {
+				return;
+			}
+			const now = Date.now();
+			const profileId = requireProfile().id;
+			const writes: Promise<void>[] = [];
+			if (a && aChanged) {
+				writes.push(persistTicket(profileId, { ...a, linkedIds: withoutLinkedId(a.linkedIds, bId), updatedAt: now }));
+			}
+			if (b && bChanged) {
+				writes.push(persistTicket(profileId, { ...b, linkedIds: withoutLinkedId(b.linkedIds, aId), updatedAt: now }));
+			}
+			await Promise.all(writes);
+		},
+		[persistTicket, requireProfile],
 	);
 
 	const cancelComplete = useCallback(() => {
@@ -2157,6 +2207,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		},
 		openLab: () => setView({ name: 'lab' }),
 		openSprint: () => setView({ name: 'sprint' }),
+		openCanvas: () => setView({ name: 'canvas' }),
 		openChores: () => setView({ name: 'chores' }),
 		openRevise: (itemId) => setView({ name: 'revise', itemId }),
 		openClass: (trackId, section) => setView({ name: 'class', trackId, section }),
@@ -2179,6 +2230,8 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		cancelComplete,
 		addTicket,
 		updateTicket,
+		linkTickets,
+		unlinkTickets,
 		updateSprint,
 		selectSprint,
 		shiftSprint,
@@ -2211,6 +2264,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		syncDriveNow: runDriveSync,
 		disconnectDrive,
 		dismissToast: (id) => setToasts((current) => current.filter((toast) => toast.id !== id)),
+		pushToast,
 		setDragging,
 	};
 

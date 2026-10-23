@@ -44,6 +44,12 @@ exam: Next cycle not yet notified (checked 13 Oct 2026 — the Oct 21/26 CBT exc
 - [ ] Adjoint & inverse: A(adjA) = |A|I; singular ⇔ |A| = 0 — solve the "find a" PYQ family
 - [ ] Systems: Cramer's rule and the three consistency cases
 
+## Maths · Complex numbers, quadratic & coordinate basics
+- [ ] Complex numbers: modulus, argument, conjugate properties (z·z̄ = |z|²), powers of i cycle
+- [ ] Quadratic equations: discriminant D = b²−4ac, nature of roots, sum/product of roots — the "find k for real roots" PYQ family
+- [ ] Straight lines: slope forms, parallel (m₁ = m₂) vs perpendicular (m₁m₂ = −1), point-to-line distance
+- [ ] Binomial theorem: general term T(r+1) = C(n,r)·aⁿ⁻ʳ·bʳ, number of terms, middle term
+
 ## Maths · Sets, relations & functions
 - [ ] Cardinality: two-set and three-set union formulas; Venn word problems
 - [ ] De Morgan + subset count (2ⁿ); n(A) from complement chains

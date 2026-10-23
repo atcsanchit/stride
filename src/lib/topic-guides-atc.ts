@@ -93,6 +93,20 @@ export const ATC_GUIDES: Record<string, TopicGuide> = {
 		],
 	},
 
+	'atc::maths · complex numbers, quadratic & coordinate basics': {
+		blurb:
+			'Class-11 chapters the official syllabus includes but candidates skip: complex numbers (3–4 PYQs), quadratic/algebra (3–4), straight lines & 3-D (3–4), P&C + binomial (2–3). All short evaluation questions — modulus/argument, discriminant conditions, slope relations, general term. These are quick Layer-1/2 marks once the four mini-formula sets are memorised.',
+		layman:
+			'A complex number is a point on a plane — its modulus is the distance from zero, its argument the direction angle. A quadratic’s discriminant is a root-weather-report: positive means two real roots, zero means a double root, negative means none. Coordinate geometry is slope bookkeeping.',
+		pattern:
+			'COMPLEX: i² = −1 (i powers cycle every 4) · z = a+ib · |z| = √(a²+b²) · z̄ = a−ib · z·z̄ = |z|² · 1/z = z̄/|z|² · arg z = tan⁻¹(b/a) · |z₁z₂| = |z₁||z₂|\nQUADRATIC ax²+bx+c: D = b²−4ac · roots = (−b ± √D)/2a · sum = −b/a, product = c/a · real roots ⇔ D ≥ 0 (the PYQ: "find k such that roots are real" → set D ≥ 0) · equal roots ⇔ D = 0\nSTRAIGHT LINES: slope m = (y₂−y₁)/(x₂−x₁) = tanθ · point-slope y−y₁ = m(x−x₁) · intercept form x/a + y/b = 1 · parallel m₁ = m₂ · perpendicular m₁·m₂ = −1 · distance from point to line = |ax₀+by₀+c|/√(a²+b²)\nBINOMIAL: (a+b)ⁿ has n+1 terms · general term T(r+1) = C(n,r)·aⁿ⁻ʳ·bʳ · coefficients sum = 2ⁿ · middle term for even n = T(n/2+1)\nP&C (feeds probability): nPr = n!/(n−r)! arrangements · nCr = n!/(r!(n−r)!) selections',
+		complexity: 'Target: ≤45 s/Q — short evaluation questions',
+		links: [
+			{ kind: 'read', label: 'NCERT Class 11 Maths (Complex Numbers, Quadratic, Straight Lines, Binomial)', href: 'https://ncert.nic.in/textbook.php' },
+			{ kind: 'paper', label: 'AAI ATC previous-year papers', href: 'https://testbook.com/aai-je-atc/previous-year-papers' },
+		],
+	},
+
 	'atc::maths · sets, relations & functions': {
 		blurb:
 			'2–3 questions in two flavours: Venn-cardinality word problems (students/games/languages) and definition checks (which relation is an equivalence, is f one-one/onto). Pure method, zero calculation load.',

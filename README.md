@@ -95,6 +95,7 @@ Project → Settings → Environment Variables:
 - **Tickets** are notes. Topics are tags, not the ticket title. Sprint tickets show on every day of the sprint. Spillover renames in place. Clone to the next day or sprint. You cannot delete a completed ticket.
 - **DSA / design** do not require GitHub. **AI practicals** need GitHub (or other public) evidence.
 - **Revise** is spaced retrieval on items you actually completed.
+- **Canvas** is the planning surface. Pull sprint tickets and chores onto it as floater tasks — drag a row from the rail, hit `+`, or press **Plan the sprint** to lay every open ticket out in status lanes. A floater is a view of its ticket, not a copy: rename it, move it across statuses, or cycle priority/effort on the floater and the board updates; change the ticket on the board and the floater follows. `＋ Note` adds a free plan note that lives only on this device's canvas layout. `Clear closed` sweeps floaters of done/cancelled tickets; removing a floater never touches the ticket. Drag the background to pan, `ctrl/⌘`+scroll to zoom, `⤢ Fit` to frame everything. **⛓ Link** draws a line between two floaters (click the button, then click two floaters) — links are saved on the tickets themselves, show as `⛓ n` chips on the sprint/chores boards, and `✕` on a line's midpoint (or in the ticket's Linked section) removes them.
 - **Lab** (localhost only) runs the Python on this laptop. See below.
 - **Export** JSON to a personal folder now and then. **Log out** when you walk away.
 

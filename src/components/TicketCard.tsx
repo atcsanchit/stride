@@ -159,6 +159,7 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 					{ticket.statusReason}
 				</p>
 			) : null}
+			{!compact ? <TicketLinks ticket={ticket} /> : null}
 			{closed || compact ? (
 				<h3>{ticket.title}</h3>
 			) : (
@@ -453,5 +454,73 @@ export function TicketCard({ ticket, compact = false }: { ticket: Ticket; compac
 				)}
 			</div>
 		</article>
+	);
+}
+
+function TicketLinks({ ticket }: { ticket: Ticket }) {
+	const { tickets, linkTickets, unlinkTickets } = useStride();
+	const [picking, setPicking] = useState(false);
+	const linked = (ticket.linkedIds ?? [])
+		.map((id) => tickets.find((row) => row.id === id))
+		.filter((row): row is Ticket => Boolean(row));
+	const candidates = tickets
+		.filter((row) => row.id !== ticket.id && !(ticket.linkedIds ?? []).includes(row.id))
+		.sort((a, b) => Number(isChoreTicket(b)) - Number(isChoreTicket(a)) || a.title.localeCompare(b.title))
+		.slice(0, 80);
+
+	if (!linked.length && !picking) {
+		return (
+			<button className="link-add ghost" type="button" onClick={() => setPicking(true)}>
+				⛓ Link a ticket
+			</button>
+		);
+	}
+
+	return (
+		<div className="ticket-links">
+			<span className="ticket-links-label">⛓ Linked</span>
+			{linked.map((row) => (
+				<span key={row.id} className="ticket-link">
+					<span className={isChoreTicket(row) ? 'ticket-link-kind chore' : 'ticket-link-kind sprint'}>
+						{isChoreTicket(row) ? 'chore' : 'sprint'}
+					</span>
+					{row.title}
+					<button
+						type="button"
+						title="Remove this link"
+						onClick={() => {
+							void unlinkTickets(ticket.id, row.id);
+						}}
+					>
+						✕
+					</button>
+				</span>
+			))}
+			{picking ? (
+				<select
+					className="ticket-link-picker"
+					value=""
+					onChange={(event) => {
+						const id = event.target.value;
+						setPicking(false);
+						if (id) {
+							void linkTickets(ticket.id, id);
+						}
+					}}
+				>
+					<option value="">Link to…</option>
+					{candidates.map((row) => (
+						<option key={row.id} value={row.id}>
+							{isChoreTicket(row) ? 'Chore — ' : ''}
+							{row.title}
+						</option>
+					))}
+				</select>
+			) : (
+				<button className="link-add ghost" type="button" onClick={() => setPicking(true)} title="Link another ticket">
+					＋
+				</button>
+			)}
+		</div>
 	);
 }
