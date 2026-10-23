@@ -361,11 +361,66 @@ export const ATC_GUIDES: Record<string, TopicGuide> = {
 			{ kind: 'paper', label: 'AAI ATC previous-year papers', href: 'https://testbook.com/aai-je-atc/previous-year-papers' },
 		],
 	},
+
+	'atc::the 120 campaign — the five laws': {
+		blurb:
+			'The course plays as a campaign. Your LEVEL is your latest full-mock score: you spawn at your baseline and level up only at full mocks (120 Q / 120 min) — 95, 104, 108, and the campaign is won at a stable 112. Weekly timed-drill marks are XP (target 40–60/week) that power you between bosses. Everything below is tracked live in Stride: class progress bars, heatmap streak, Revise cards.',
+		layman:
+			'An arcade run has three parts: fixed controls (the Daily Raid), a score you can see (the mock level), and continues when you fail (respawn, never restart). This course is the same design — which is why it is playable instead of merely readable.',
+		pattern:
+			'LAW 1 · THE DAILY RAID (3.5 h, five blocks): 60′ Theory Quest (1–2 Stride classes) → 60′ Numeric Arena (20 aptitude + 15 physics-plug + 10 maths-form, timed) → 30′ Part-A Drill (English/Reasoning alternating) → 20′ GK Vault → 15′ Damage Report.\nLAW 2 · LEVEL = MOCK SCORE: level moves only at full mocks; weekly XP = timed-drill marks, target 40–60.\nLAW 3 · THE STREAK IS SACRED: Stride heatmap is the counter; the floor is 1 completed block on the worst day; never two zero days.\nLAW 4 · THE DAMAGE REPORT: every miss gets exactly one bucket — concept gap / speed loss / silly error / time trap — and the top-2 buckets are fixed weekly. Boss results are judged by buckets, not feelings.\nLAW 5 · THE 60-SECOND LAW: Pass 1 at ≤60 s/Q, puzzles ≤90 s then park, guess-fill every blank at the end (no negative marking — blanks are the only real loss).\nRESPAWN RULE: missed a week → resume, never restart; a failed boss extends the act by 1–2 weeks; the ladder stays.',
+		complexity: 'Target: 2 blocks/day · weekly XP 40–60 · never two zero days',
+		links: [],
+	},
+
+	'atc::act i · foundation forge (weeks 1–8)': {
+		blurb:
+			'Act I forges Tier-1 everywhere before touching anything rare. The order follows the PYQ evidence: Physics opens with EM waves + the Modern cluster (3.9 + ~5 per shift), Maths with the calculus cluster (7.6/shift — a third of the section), Reasoning with series (3.6/shift, every shift), English with the grammar rule systems (3.4/shift), Aptitude with the fraction-% table. Tier-2 and Tier-3 chapters wait for Act II.',
+		layman:
+			'You are forging the weapons you will use for the whole campaign. Rushing rare chapters here is how runs die — the high-frequency chapters are the ones every future boss will attack you with.',
+		pattern:
+			'WK 1 · Awakening — baseline full mock + damage report + build the 3 formula sheets.\nWK 2 · EM waves + Modern cluster (Physics) · English connector map + SVA rules · fraction-% table week begins.\nWK 3 · Electrostatics + Current · the 4-step series check (30 series done) · GK static pair tables.\nWK 4 · Magnetism + EMI · Maths calculus cluster begins (15 standard forms) · coding 3 sub-patterns.\nWK 5 · Ray + wave optics · limits + definite-integral properties · T&W (LCM) + SI/CI shortcuts · RC method starts.\nWK 6 · Semiconductors · area-under-curve archetype · syllogism + blood relations · polity 10-article core.\nWK 7 · Vectors + 3-D (the 5.1/shift cluster) · number system (cyclicity, LCM-HCF) · sectional #1.\nWK 8 · BOSS 1 — Part-A sectional ≥45/60 in 55 min + a full mock; Tier-1 classes ≥80% complete in Stride.\nPASS CONDITION: both numbers. Fail → repeat the weakest 2 weeks of Act I, then re-challenge.',
+		complexity: 'Target: exit Act I at Level 90–95 with Tier-1 forged',
+		links: [],
+	},
+
+	'atc::act ii · speed dungeon (weeks 9–16)': {
+		blurb:
+			'Act II converts knowledge into speed. The remaining classes (matrices/dets, sets, mechanics, thermo, P&L/TSD/mensuration, cloze, seating discipline, GK geography) land here, and the sectional cadence begins — Saturday Tech, Sunday Part A, alternating. Drill B flashcards go daily: name the Maths form in ≤5 s, the Physics law in ≤5 s.',
+		layman:
+			'Act I taught you the moves; Act II drills them until they are reflexes. The dungeon is timed — every sectional is a run against the clock, and the error log is the map of where the walls are.',
+		pattern:
+			'WK 9–10 · Matrices/determinants + sets (Maths) · mechanics cluster + thermo (Physics) · cloze + rearrangement (English) · sectional cadence begins.\nWK 11–12 · Aptitude Tier-2 complete (P&L, TSD, mensuration, mixtures, partnership) · seating 90-s discipline + directions (Reasoning) · Drill B flashcards daily.\nWK 13–14 · GK geography lines/rivers + science one-liners + the aviation-adjacent sheet · English vocab machine at full spin · two-pass + park rehearsed in every sectional.\nWK 15 · Dress rehearsal — Part-A sectional ≥50/60 + Part-B sectional ≥40/60 · weak-class patching from the damage report.\nWK 16 · BOSS 2 — full mock ≥95.\nRESPAWN: below 90 → extend foundation by 2 weeks (skip-list unchanged), then re-challenge. Between 90–94 → patch the top-2 buckets and re-challenge immediately.',
+		complexity: 'Target: exit Act II at Level 95+ · Part A ≥50/60 in sectionals',
+		links: [],
+	},
+
+	'atc::act iii · mock arena (weeks 17–24)': {
+		blurb:
+			'Act III is the ladder: 95–103 → 104–110 → stable 108+. Two full mocks a week, same-evening redo of wrong and parked questions, and the Layer-3 cherry-pick list grows only from your six strongest chapters. No new chapters after Week 20; the last 10 days run on the CA sheet and pair tables alone.',
+		layman:
+			'The arena is where levels actually move. Lose, read the damage report, patch two buckets, climb again. 104 after 103 is the almost-there signal that keeps the run alive.',
+		pattern:
+			'WK 17–18 · Mock ladder 95–103 — two full mocks/week, same-evening redo of wrong + parked, error log before sleeping.\nWK 19–20 · BOSS 3 — mock ≥104 with Part A closed ≤55 min; silly-error bucket ≤5; all speed caps inside budget.\nWK 21–24 · FINAL BOSS — 3 consecutive mocks ≥108 · no new chapters after W20 · last-10-day protocol: CA sheet + pair tables only, no full mock the day before.\nNOTIFICATION WATCH: weekly dashboard check continues; when the Advt drops, run the first-72-h protocol (verify pattern + negative marking, register same day, re-map phases).\nJUDGE EVERY MOCK BY BUCKETS: concept → relearn · speed → Drill A/B · silly → unit/sign ritual · time-trap → should have been parked.',
+		complexity: 'Target: 3 consecutive mocks ≥108 = Ascended · stretch 112',
+		links: [],
+	},
+
+	'atc::achievement hall — 15 badges': {
+		blurb:
+			'Fifteen badges, each tied to a real, checkable event — claimed only when the evidence exists. Log the event in a Stride ticket or notes file when you earn one; the badge list doubles as the campaign trophy case. Badges are side quests: they reward the behaviours (streaks, clean sheets, zero blanks) that produce the level-ups.',
+		layman:
+			'Badges are the side quests that keep the main quest fun. None of them require talent — they require showing up and running the systems: the streak, the sheets, the drills, the park rule.',
+		pattern:
+			'🩸 First Blood — baseline mock + damage report completed.\n🔨 The Smith — 3 formula sheets built & in use.\n🗺️ Cartographer — all 25 classes opened & queued.\n🔥 Streak VII — 7-day heatmap streak.\n🌙 Streak XXX — 30-day heatmap streak.\n⚡ Series Slayer — 20/20 on a series sprint (all 3 kinds).\n🔓 Codebreaker — clean sweep on a mixed coding set.\n📜 Historian — history + polity + rivers tables complete.\n🧮 Table Wizard — fraction-% table under 30 s for all values.\n👻 The Ghost — a Part-A sectional with zero blanks in ≤55 min.\n🎯 L3 Assassin — 5+ Layer-3 questions correct in one mock.\n🛡️ Untouchable — silly-error bucket ≤2 in a full mock.\n💯 Century — first mock ≥100.\n🚪 Gatekeeper II — Week-16 boss cleared (mock ≥95).\n👑 Ascended — 3 consecutive mocks ≥108. Campaign won.',
+		complexity: 'Claim rule: evidence first, badge second',
+		links: [],
+	},
 };
 
 export const ATC_TRACK_SOURCE: TopicGuide = {
 	blurb:
-		'Built from the verified AAI JE (ATC) record: official blueprint (120 Q / 120 min CBT, Part A locked before Part B, no negative marking in 2021+ cycles), coaching exam analyses for topic weightage (2021, 2023×2, 2025), and official aai.aero cutoff PDFs (UR 103.06 → 108.00). Theory lives in each class page — formula sheet, PYQ styles, traps, time target. NCERT Class 11–12 covers every formula that appears.',
+		'Built from the verified AAI JE (ATC) record: official blueprint (120 Q / 120 min CBT, Part A locked before Part B, no negative marking in 2021+ cycles), coaching exam analyses for topic weightage (2021, 2023×2, 2025), and official aai.aero cutoff PDFs (UR 103.06 → 108.00). Theory lives in each class page — formula sheet, PYQ styles, traps, time target. NCERT Class 11–12 covers every formula that appears. The course now plays as a campaign: Level = mock score, three acts, four bosses, 15 badges — tracking lives in Stride\'s progress bars, heatmap and Revise.',
 	layman:
 		'Every class in this course has a Pattern note — the formulas, the exact PYQ styles AAI recycles, the traps, and a per-question time target. Open the class page before drilling, then produce: timed questions, not re-reading.',
 	links: [
