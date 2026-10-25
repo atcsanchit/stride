@@ -1,6 +1,6 @@
 # Stride
 
-Personal interview-prep tracker for **DSA**, **system design**, **AI engineering**, and the **AAI ATC exam**. Learning is production, not consumption: blurt first, apply the same day, write one sentence of what you learned.
+Personal interview-prep tracker for **DSA**, **system design**, **AI engineering**, and the **AAI ATC exam** (the bundled ATC course plays as a gamified campaign: Level = mock score; 3 acts; 15 badges). Learning is production, not consumption: blurt first, apply the same day, write one sentence of what you learned.
 
 Local: `http://localhost:5174`  
 Production: whatever origin you add to the OAuth client (example: `https://your-app.vercel.app`).

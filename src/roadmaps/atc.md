@@ -3,7 +3,7 @@ track: atc
 title: AAI ATC (Junior Executive) — Exam Prep
 summary: 120 Q / 120 min CBT, no negative marking, Part A locked before Part B. Questions come in 3 layers — recall (35–45%), plug-and-compute (30–35%), concept+application (20–30%) — so ~70–80 marks are formula-level. UR cutoff 87 (2018) → 108 (2025), saturating ~112–116.
 details: Blueprint verified across 2021/2023×2/2025 cycles. Part A (60 Q) — English 20, Reasoning 15, Aptitude 15, GK 10. Part B (60 Q) — Maths 30 (calculus 6–8 Qs is the engine), Physics 30. Difficulty: Part A Easy for 5 straight years (speed bank); Physics steady Moderate; Maths Easy (2021) → hardest (2025). Every class below carries its own theory notes (open the guide on the class page) — formula sheet, PYQ styles, traps, and a time target.
-goal: Stabilize 110–115 in full mocks (3 consecutive ≥110 = ready), then clear the UR cutoff — target 112+ safe, 115 insulated — in the next AAI ATC cycle.
+goal: Level up from baseline to stable 112 (3 consecutive mocks ≥108) — the campaign ends when the cutoff is beaten. Play style: LEVEL = your latest full-mock score. Three acts, four bosses, 15 badges.
 exam: Next cycle not yet notified (checked 13 Oct 2026 — the Oct 21/26 CBT excludes ATC; last cycle Advt 02/2025, 309 posts, final result Apr 2026). Cycles run roughly annually; registration window ~30 days. Watch aai.aero → Careers → Recruitment Dashboard weekly.
 ---
 
@@ -15,6 +15,8 @@ exam: Next cycle not yet notified (checked 13 Oct 2026 — the Oct 21/26 CBT exc
 - [ ] Lock the score architecture — Tech 50–55 + Eng/Reas 31–33 + Apt 13–14 + GK 8–9 = 112–115 target (UR 2025 cutoff: 108)
 - [ ] Weekly dashboard watch — aai.aero → Careers → Recruitment Dashboard for the next JE(ATC) advertisement (none open as of Oct 2026; last cycle closed Apr 2026)
 - [ ] Fix the weekly calendar — 1 timed sectional alternating Tech / Part A from week 3; full mocks from week 9
+- [ ] Weekly Sunday ceremony — Stride class %, heatmap streak, current level, XP earned, next week's main quest
+- [ ] Respawn rule — resume, never restart: a failed boss extends the act by 1–2 weeks; the ladder stays
 
 ## Maths · Calculus (integration & differentiation)
 - [ ] Recite cold: 12 standard integrals + 8 derivative results from the class Pattern notes
@@ -150,3 +152,49 @@ exam: Next cycle not yet notified (checked 13 Oct 2026 — the Oct 21/26 CBT exc
 - [ ] Final 3 mocks: stable 110–115 with silly-error bucket ≤5 marks
 - [ ] Exam-ready gate: 3 consecutive mocks ≥110
 - [ ] On notification: verify pattern + negative-marking status, register same day, then re-map (≥60 d continue / 30–60 d compress Phase 2 / <30 d mocks only)
+
+## The 120 Campaign — the five laws
+- [ ] Law 1 · The Daily Raid — 3.5 h in five blocks: 60′ Theory Quest → 60′ Numeric Arena → 30′ Part-A Drill → 20′ GK Vault → 15′ Damage Report
+- [ ] Law 2 · Level = mock score — the level only moves at full mocks; weekly XP = timed-drill marks (target 40–60/week)
+- [ ] Law 3 · The streak is sacred — the Stride heatmap is the counter; floor = 1 block on the worst day; never two zero days
+- [ ] Law 4 · The damage report — every miss gets exactly one bucket (concept / speed / silly / time-trap); fix the top-2 buckets weekly
+- [ ] Law 5 · The 60-second law — Pass 1 at ≤60 s/Q, puzzles ≤90 s then park, guess-fill every blank at the end (no negative marking)
+
+## Act I · Foundation Forge (weeks 1–8)
+- [ ] Wk 1 · Awakening — baseline full mock + damage report + build the 3 formula sheets
+- [ ] Wk 2 · EM waves + Modern cluster · English connector map + SVA rules · fraction-% table week
+- [ ] Wk 3 · Electrostatics + Current · the 4-step series check (30 series) · GK static pair tables
+- [ ] Wk 4 · Magnetism + EMI · Maths calculus cluster begins (15 standard forms) · coding 3 sub-patterns
+- [ ] Wk 5 · Ray + wave optics · limits + definite-integral properties · T&W (LCM) + SI/CI shortcuts · RC method starts
+- [ ] Wk 6 · Semiconductors · area-under-curve archetype · syllogism + blood relations · polity 10-article core
+- [ ] Wk 7 · Vectors + 3-D (the 5.1/shift cluster) · number system (cyclicity, LCM-HCF) · sectional #1
+- [ ] Wk 8 · BOSS 1 — Part-A sectional ≥45/60 in 55 min + full mock; Tier-1 classes ≥80% in Stride
+
+## Act II · Speed Dungeon (weeks 9–16)
+- [ ] Wk 9–10 · Matrices/determinants + sets · mechanics cluster + thermo · cloze + rearrangement · sectional cadence begins
+- [ ] Wk 11–12 · Aptitude Tier-2 (P&L, TSD, mensuration, mixtures, partnership) · seating 90-s discipline + directions · Drill B flashcards daily
+- [ ] Wk 13–14 · Geography lines/rivers + science one-liners + aviation-adjacent sheet · two-pass rehearsed in every sectional
+- [ ] Wk 15 · Dress rehearsal — Part-A sectional ≥50/60 + Part-B sectional ≥40/60 · weak-class patching
+- [ ] Wk 16 · BOSS 2 — full mock ≥95 (below 90 → extend foundation 2 weeks, skip-list unchanged)
+
+## Act III · Mock Arena (weeks 17–24)
+- [ ] Wk 17–18 · Mock ladder 95–103 — two full mocks/week + same-evening redo of wrong & parked
+- [ ] Wk 19–20 · BOSS 3 — mock ≥104 with Part A closed ≤55 min; silly-error bucket ≤5
+- [ ] Wk 21–24 · FINAL BOSS — 3 consecutive mocks ≥108 · no new chapters after W20 · last-10-day protocol (CA sheet + pair tables only) · notification first-72-h ready
+
+## Achievement hall — 15 badges
+- [ ] First Blood (baseline mock + damage report completed)
+- [ ] The Smith (3 formula sheets built & in use)
+- [ ] Cartographer (all 25 classes opened & queued)
+- [ ] Streak VII (7-day heatmap streak)
+- [ ] Streak XXX (30-day heatmap streak)
+- [ ] Series Slayer (20/20 on a series sprint — all 3 kinds)
+- [ ] Codebreaker (clean sweep on a mixed coding set)
+- [ ] Historian (history + polity + rivers tables complete)
+- [ ] Table Wizard (fraction-% table under 30 s for all values)
+- [ ] The Ghost (Part-A sectional: zero blanks in ≤55 min)
+- [ ] L3 Assassin (5+ Layer-3 questions correct in one mock)
+- [ ] Untouchable (silly-error bucket ≤2 in a full mock)
+- [ ] Century (first mock ≥100)
+- [ ] Gatekeeper II (Week-16 boss cleared: mock ≥95)
+- [ ] Ascended (3 consecutive mocks ≥108 — campaign won)
