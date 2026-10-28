@@ -5,16 +5,25 @@ import type { WorkSession } from '../types';
 import { useStride } from '../store/StrideState';
 
 export function TimerDock() {
-	const { runningSessions, sessions, pauseTimer, resumeTimer, pauseTimerSession, resumeTimerSession, requestComplete } =
+	const { runningSessions, sessions, tickets, pauseTimer, resumeTimer, pauseTimerSession, resumeTimerSession, requestComplete } =
 		useStride();
 	const [now, setNow] = useState(Date.now());
 	const [expanded, setExpanded] = useState(false);
 
+	// Skip sessions whose ticket was deleted — they are ended by the store, but
+	// don't render one for a frame before that lands.
+	const liveTicketIds = new Set(tickets.map((ticket) => ticket.id));
+
 	// Running sessions, newest first; then paused open-work sessions below them.
 	const pausedOpen = sessions
-		.filter((session) => isSessionPaused(session) && !session.endedAt)
+		.filter(
+			(session) =>
+				isSessionPaused(session) && !session.endedAt && (!session.ticketId || liveTicketIds.has(session.ticketId)),
+		)
 		.sort((a, b) => b.startedAt - a.startedAt);
-	const rows: WorkSession[] = [...runningSessions, ...pausedOpen];
+	const rows: WorkSession[] = [...runningSessions, ...pausedOpen].filter(
+		(session) => !session.ticketId || liveTicketIds.has(session.ticketId),
+	);
 	const runningCount = runningSessions.length;
 	const pausedCount = rows.length - runningCount;
 	const totalMs = rows.reduce((sum, session) => sum + sessionElapsed(session, now), 0);
