@@ -146,6 +146,7 @@ interface StrideContextValue {
 	plan: TodayPlan;
 	coach: CoachNote;
 	activeSession: WorkSession | null;
+	runningSessions: WorkSession[];
 	pendingItemId: string | null;
 	pendingTicketId: string;
 	currentSprint: Sprint | null;
@@ -171,6 +172,8 @@ interface StrideContextValue {
 	startTask: (itemId: string, ticketId?: string) => Promise<void>;
 	pauseTimer: (ticketId?: string) => Promise<void>;
 	resumeTimer: (ticketId?: string) => Promise<void>;
+	pauseTimerSession: (sessionId: string) => Promise<void>;
+	resumeTimerSession: (sessionId: string) => Promise<void>;
 	setTicketStatus: (id: string, status: TicketStatus, reason?: string) => Promise<void>;
 	requestComplete: (itemId: string, ticketId?: string) => void;
 	submitComplete: (input: {
@@ -885,16 +888,30 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		setTickets(next);
 	}, []);
 
-	const pauseOtherRunning = useCallback(
-		async (profileId: string, exceptId?: string) => {
-			const now = Date.now();
-			const running = sessionsRef.current.filter((session) => isSessionRunning(session) && session.id !== exceptId);
-			await persistSessions(
-				profileId,
-				running.map((session) => pauseSession(session, now)),
-			);
+	const pauseTimerSession = useCallback(
+		async (sessionId: string) => {
+			const profileId = requireProfile().id;
+			const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+			if (!session || !isSessionRunning(session)) {
+				return;
+			}
+			await persistSession(profileId, pauseSession(session, Date.now()));
+			pushToast('Timer paused', session.title);
 		},
-		[persistSessions],
+		[persistSession, pushToast, requireProfile],
+	);
+
+	const resumeTimerSession = useCallback(
+		async (sessionId: string) => {
+			const profileId = requireProfile().id;
+			const session = sessionsRef.current.find((entry) => entry.id === sessionId);
+			if (!session || !isSessionPaused(session)) {
+				return;
+			}
+			await persistSession(profileId, resumeSession(session, Date.now()));
+			pushToast('Timer on', session.title);
+		},
+		[persistSession, pushToast, requireProfile],
 	);
 
 	const sessionBelongsToOpenWork = useCallback((session: WorkSession) => {
@@ -925,6 +942,14 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}) ?? null
 		);
 	}, [sessionBelongsToOpenWork, sessions, tickets]);
+
+	const runningSessions = useMemo(
+		() =>
+			sessions
+				.filter((session) => isSessionRunning(session) && sessionBelongsToOpenWork(session))
+				.sort((a, b) => b.startedAt - a.startedAt),
+		[sessionBelongsToOpenWork, sessions],
+	);
 	const currentSprint = useMemo(
 		() => sprints.find((sprint) => sprint.id === activeSprintId) ?? sprints[0] ?? null,
 		[activeSprintId, sprints],
@@ -960,7 +985,6 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 				}
 				return;
 			}
-			await pauseOtherRunning(profileId, existing?.id);
 			if (existing) {
 				await persistSession(profileId, resumeSession(existing, now));
 			} else {
@@ -980,7 +1004,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			}
 			pushToast('Timer on', title);
 		},
-		[pauseOtherRunning, persistSession, persistTicket, pushToast, requireProfile],
+		[persistSession, persistTicket, pushToast, requireProfile],
 	);
 
 	const requestComplete = useCallback((itemId: string, ticketId = '') => {
@@ -2181,6 +2205,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		plan,
 		coach,
 		activeSession,
+		runningSessions,
 		pendingItemId,
 		pendingTicketId,
 		currentSprint,
@@ -2222,6 +2247,8 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		startTask,
 		pauseTimer,
 		resumeTimer,
+		pauseTimerSession,
+		resumeTimerSession,
 		setTicketStatus,
 		requestComplete,
 		submitComplete,

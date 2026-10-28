@@ -3,8 +3,8 @@ import type { RoadmapItem } from '../types';
 import { useStride } from '../store/StrideState';
 
 export function TaskRow({ item, compact = false }: { item: RoadmapItem; compact?: boolean }) {
-	const { requestComplete, openRevise, openLesson, activeSession, completions } = useStride();
-	const running = Boolean(activeSession && activeSession.itemId === item.id);
+	const { requestComplete, openRevise, openLesson, runningSessions, completions } = useStride();
+	const running = runningSessions.some((session) => session.itemId === item.id);
 	const completion = completions.filter((row) => row.itemId === item.id).at(-1);
 
 	return (

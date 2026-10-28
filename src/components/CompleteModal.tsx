@@ -4,7 +4,7 @@ import { ticketPrReady } from '../lib/github-pr';
 import { parseGitHubUrls, ticketNeedsPracticalEvidence, ticketPracticalChallenges } from '../lib/practical';
 import { formatElapsed } from '../lib/time';
 import { ticketTopics } from '../lib/ticket';
-import { sessionElapsed } from '../lib/work-session';
+import { openSessionForTicket, sessionElapsed } from '../lib/work-session';
 import type { Score } from '../types';
 import { useStride } from '../store/StrideState';
 import { EffortPills } from './EffortPills';
@@ -16,8 +16,8 @@ export function CompleteModal() {
 		pendingTicketId,
 		items,
 		tickets,
+		sessions,
 		settings,
-		activeSession,
 		submitComplete,
 		cancelComplete,
 	} = useStride();
@@ -41,11 +41,13 @@ export function CompleteModal() {
 	);
 	const githubUrls = parseGitHubUrls(evidenceLinks);
 	const title = item?.title ?? ticket?.title ?? 'Task';
-	const elapsed =
-		activeSession &&
-		((pendingItemId && activeSession.itemId === pendingItemId) || (ticket && activeSession.ticketId === ticket.id))
-			? sessionElapsed(activeSession)
-			: 0;
+	// The timer being completed: its own open session (any of several may be running).
+	const pendingSession = pendingItemId
+		? sessions.find((session) => !session.endedAt && session.itemId === pendingItemId)
+		: pendingTicketId
+			? openSessionForTicket(sessions, pendingTicketId)
+			: undefined;
+	const elapsed = pendingSession ? sessionElapsed(pendingSession) : 0;
 
 	return (
 		<div className="modal-root" role="dialog">

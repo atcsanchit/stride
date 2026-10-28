@@ -9,7 +9,7 @@ import { PracticalChallengeCard } from './PracticalChallengeCard';
 import { TopicGuideCard } from './TopicGuideCard';
 
 export function LessonPage({ itemId }: { itemId: string }) {
-	const { items, startTask, requestComplete, openRevise, openClass, openTrack, openLab, activeSession, completions, reviews, saveLessonNote } =
+	const { items, startTask, requestComplete, openRevise, openClass, openTrack, openLab, runningSessions, completions, reviews, saveLessonNote } =
 		useStride();
 	const item = items.find((entry) => entry.id === itemId);
 	if (!item) {
@@ -23,7 +23,7 @@ export function LessonPage({ itemId }: { itemId: string }) {
 	const meta = trackMeta(item.trackId);
 	const guide = lessonGuide(item);
 	const klass = topicGuide(item.trackId, item.section);
-	const running = Boolean(activeSession && activeSession.itemId === item.id);
+	const running = runningSessions.some((session) => session.itemId === item.id);
 	const last = completions.filter((row) => row.itemId === item.id).at(-1);
 	const savedRecall = openingNote(
 		item.id,
