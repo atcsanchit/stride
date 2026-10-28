@@ -263,6 +263,8 @@ interface StrideContextValue {
 	dismissToast: (id: string) => void;
 	pushToast: (title: string, body: string) => void;
 	setDragging: (value: boolean) => void;
+	focusTicket: (ticketId: string) => void;
+	ticketFocus: { id: string; at: number } | null;
 }
 
 const StrideContext = createContext<StrideContextValue | null>(null);
@@ -307,6 +309,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 	const [settings, setSettings] = useState<Settings>(emptySettings());
 	const [toasts, setToasts] = useState<ToastMessage[]>([]);
 	const [dragging, setDragging] = useState(false);
+	const [ticketFocus, setTicketFocus] = useState<{ id: string; at: number } | null>(null);
 	const [drive, setDrive] = useState<DriveStatus>(getDriveStatus);
 	const pendingCourseUpload = courseUploadQueue[0] ?? null;
 
@@ -2239,6 +2242,14 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		openLesson: (itemId) => setView({ name: 'lesson', itemId }),
 		openDay: (date) => setView({ name: 'day', date }),
 		openSettings: () => setView({ name: 'settings' }),
+		focusTicket: (ticketId) => {
+			const ticket = ticketsRef.current.find((entry) => entry.id === ticketId);
+			if (!ticket) {
+				return;
+			}
+			setView({ name: ticket.kind === 'chore' ? 'chores' : 'sprint' } as View);
+			setTicketFocus({ id: ticketId, at: Date.now() });
+		},
 		setActiveTrack,
 		setTarget,
 		saveCourses,
@@ -2293,6 +2304,7 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		dismissToast: (id) => setToasts((current) => current.filter((toast) => toast.id !== id)),
 		pushToast,
 		setDragging,
+		ticketFocus,
 	};
 
 	return <StrideContext.Provider value={value}>{children}</StrideContext.Provider>;
