@@ -5,7 +5,7 @@ import { isSessionPaused, sessionElapsed } from '../lib/work-session';
 import { useStride } from '../store/StrideState';
 
 export function ContextRail() {
-	const { completions, coach, activeSession, reviews, items, openRevise, openSprint, openChores } = useStride();
+	const { completions, coach, activeSession, runningSessions, reviews, items, openRevise, openSprint, openChores } = useStride();
 	const clock = craftClock(completions);
 	const today = todayKey();
 	const todayMs = completions.reduce((sum, row) => {
@@ -52,7 +52,10 @@ export function ContextRail() {
 				<section className={`rail-card${paused ? ' is-paused' : ' is-live'}`}>
 					<p className="eyebrow">{paused ? 'Paused' : 'Timer live'}</p>
 					<strong className="rail-timer-title">{activeSession.title}</strong>
-					<p className="muted">{formatElapsed(sessionElapsed(activeSession))}</p>
+					<p className="muted">
+						{formatElapsed(sessionElapsed(activeSession))}
+						{runningSessions.length > 1 ? ` · +${runningSessions.length - 1} more running` : ''}
+					</p>
 				</section>
 			) : null}
 

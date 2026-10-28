@@ -4144,3 +4144,128 @@ textarea.cf-input {
 .ticket-links-flag {
 	color: var(--spark);
 }
+
+/* --- multi-timer dock stack --- */
+.timer-dock-stack {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+.timer-dock-head {
+	display: flex;
+	align-items: center;
+	gap: 0.7rem;
+	width: 100%;
+	padding: 0.7rem 1rem;
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	text-align: left;
+	color: inherit;
+	font: inherit;
+}
+
+.timer-dock-head:hover {
+	background: rgba(255, 255, 255, 0.04);
+}
+
+.timer-dock-dot {
+	width: 0.55rem;
+	height: 0.55rem;
+	border-radius: 50%;
+	background: var(--good, #4ade80);
+	box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.15);
+	flex: none;
+}
+
+.timer-dock-count {
+	flex: 1;
+	font-size: 0.9rem;
+	letter-spacing: 0.02em;
+}
+
+.timer-dock-count strong {
+	font-family: var(--serif);
+	font-size: 1.15rem;
+	margin-right: 0.15rem;
+}
+
+.timer-dock-head .timer-readout {
+	font-size: 1.1rem;
+}
+
+.timer-dock-chevron {
+	flex: none;
+	color: var(--muted, #8b93a7);
+	font-size: 0.9rem;
+}
+
+.timer-stack {
+	display: flex;
+	flex-direction: column;
+	border-top: 1px solid var(--line, rgba(255, 255, 255, 0.08));
+	max-height: min(44vh, 420px);
+	overflow-y: auto;
+}
+
+.timer-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 0.5rem 0.8rem;
+	padding: 0.6rem 1rem;
+	border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.06));
+}
+
+.timer-row:last-child {
+	border-bottom: none;
+}
+
+.timer-row.is-paused {
+	opacity: 0.72;
+}
+
+.timer-row-main {
+	display: flex;
+	align-items: baseline;
+	gap: 0.6rem;
+	flex: 1;
+	min-width: 0;
+}
+
+.timer-row-main strong {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.timer-row-main .timer-readout {
+	font-size: 1.05rem;
+	flex: none;
+}
+
+.timer-row-state {
+	font-size: 0.68rem;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--good, #4ade80);
+	flex: none;
+}
+
+.timer-row-state.is-paused {
+	color: var(--muted, #8b93a7);
+}
+
+.timer-row-actions {
+	display: flex;
+	gap: 0.35rem;
+	flex: none;
+}
+
+.timer-row-actions .primary {
+	padding-block: 0.3rem;
+}
