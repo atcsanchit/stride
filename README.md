@@ -7,6 +7,15 @@ Production: whatever origin you add to the OAuth client (example: `https://your-
 
 This is a personal app. Do **not** put it in an employer cloud, work Firestore, company Mongo, or a work Google login.
 
+## Quick search
+
+Press **Ctrl K** (or the ⌕ Search pill, bottom-right) anywhere to search:
+
+- **Tasks · sprint + chores** — one combined list of both ticket kinds; Enter opens the ticket pane directly.
+- **Courses · lessons** — course names plus every lesson title; Enter opens the lesson page.
+
+↑↓ to move, Enter to open, Esc to close.
+
 ## Run
 
 ```bash

@@ -21,7 +21,8 @@ type Pane = { mode: 'closed' } | { mode: 'new' } | { mode: 'ticket'; id: string 
 type TimerPrompt = { ticketId: string; closeAfter: boolean };
 
 export function TicketBoard({ kind }: { kind: TicketKind }) {
-	const { currentSprint, tickets, sessions, sprints, resumeTimer, updateSprint, shiftSprint, selectSprint } = useStride();
+	const { currentSprint, tickets, sessions, sprints, resumeTimer, updateSprint, shiftSprint, selectSprint, ticketFocus } =
+		useStride();
 	const [pane, setPane] = useState<Pane>({ mode: 'closed' });
 	const [maximized, setMaximized] = useState(false);
 	const [selectedDay, setSelectedDay] = useState<string | 'all'>('all');
@@ -80,6 +81,22 @@ export function TicketBoard({ kind }: { kind: TicketKind }) {
 			setTimerPrompt(null);
 		}
 	}, [sessions, tickets, timerPrompt]);
+
+	// Quick-search jumped to a ticket: open its pane here.
+	useEffect(() => {
+		if (!ticketFocus) {
+			return;
+		}
+		const ticket = tickets.find((entry) => entry.id === ticketFocus.id);
+		const mine = ticket && (chore ? isChoreTicket(ticket) : isSprintTicket(ticket));
+		if (mine) {
+			setPane({ mode: 'ticket', id: ticketFocus.id });
+			setMaximized(false);
+			setTimerPrompt(
+				ticket && ticketTimerPaused(ticket, sessions) ? { ticketId: ticketFocus.id, closeAfter: false } : null,
+			);
+		}
+	}, [chore, sessions, ticketFocus, tickets]);
 
 	const sorted = [...scoped].sort(
 		(a, b) =>

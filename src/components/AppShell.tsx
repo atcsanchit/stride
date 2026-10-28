@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { activeNavFromView, AppNav } from './AppNav';
 import { AccountBar } from './AccountBar';
 import { ContextRail } from './ContextRail';
+import { QuickSearch } from './QuickSearch';
 import { useStride } from '../store/StrideState';
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -20,6 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 				<main className="app-main">{children}</main>
 				<ContextRail />
 			</div>
+			<QuickSearch />
 		</div>
 	);
 }
