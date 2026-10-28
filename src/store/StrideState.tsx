@@ -884,6 +884,28 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		[persistSessions],
 	);
 
+	// Self-heal: an open session whose ticket no longer exists (trashed on another
+	// device, removed by an older build, or lost in a sync clobber) can never be
+	// completed again — end it so it stops haunting the timer dock.
+	const orphanOpenSessionIds = useMemo(() => {
+		const liveTicketIds = new Set(tickets.map((entry) => entry.id));
+		return sessions
+			.filter((session) => !session.endedAt && session.ticketId && !liveTicketIds.has(session.ticketId))
+			.map((session) => session.id);
+	}, [sessions, tickets]);
+	useEffect(() => {
+		if (!profile || orphanOpenSessionIds.length === 0) {
+			return;
+		}
+		const now = Date.now();
+		const orphans = sessionsRef.current
+			.filter((session) => orphanOpenSessionIds.includes(session.id) && !session.endedAt)
+			.map((session) => endSession(session, now));
+		if (orphans.length > 0) {
+			void persistSessions(profile.id, orphans);
+		}
+	}, [orphanOpenSessionIds, persistSessions, profile]);
+
 	const persistTicket = useCallback(async (profileId: string, ticket: Ticket) => {
 		await putTicket(profileId, ticket);
 		const next = ticketsRef.current.map((entry) => (entry.id === ticket.id ? ticket : entry));
@@ -1014,9 +1036,13 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 		if (!itemId && !ticketId) {
 			return;
 		}
+		if (!itemId && ticketId && !ticketsRef.current.some((entry) => entry.id === ticketId)) {
+			pushToast('Ticket not found', 'Its timer was already cleaned up.');
+			return;
+		}
 		setPendingItemId(itemId || null);
 		setPendingTicketId(ticketId);
-	}, []);
+	}, [pushToast]);
 
 	const pauseTimer = useCallback(
 		async (ticketId = '') => {
@@ -1739,13 +1765,22 @@ export function StrideProvider({ children }: { children: ReactNode }) {
 			if (!ticket) {
 				return;
 			}
-			await deleteTicket(requireProfile().id, id);
+			const profileId = requireProfile().id;
+			const open = openSessionsForTicket(sessionsRef.current, id).filter((session) => !session.endedAt);
+			if (open.length > 0) {
+				const now = Date.now();
+				await persistSessions(
+					profileId,
+					open.map((session) => endSession(session, now)),
+				);
+			}
+			await deleteTicket(profileId, id);
 			const next = ticketsRef.current.filter((entry) => entry.id !== id);
 			ticketsRef.current = next;
 			setTickets(next);
 			pushToast('Moved to trash', ticket.title);
 		},
-		[pushToast, requireProfile],
+		[persistSessions, pushToast, requireProfile],
 	);
 
 	const importFiles = useCallback(
